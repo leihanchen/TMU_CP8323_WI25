@@ -1,7 +1,7 @@
 import os
 import re
 import shutil
-from ollama import chat
+from ollama import chat, Client
 from tavily import TavilyClient
 from pydantic import BaseModel
 from langchain_community.document_loaders import CSVLoader, TextLoader, PDFPlumberLoader
@@ -45,6 +45,7 @@ def invoke_ollama(model, system_prompt, user_prompt, output_format=None):
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
     ]
+    # client = Client(host="http://141.117.231.104:11434")
     response = chat(
         messages=messages,
         model=model,
@@ -55,7 +56,34 @@ def invoke_ollama(model, system_prompt, user_prompt, output_format=None):
         return output_format.model_validate_json(response.message.content)
     else:
         return response.message.content
-    
+
+def invoke_vllm(model, system_prompt, user_prompt, output_format=None):
+    from openai import OpenAI
+    # Set the API base to your vLLM server endpoint.
+    # Replace the URL with your actual vLLM endpoint (including the appropriate port and path, e.g., /v1).
+    client = OpenAI(
+        base_url="http://141.117.231.104:8000/v1",
+        api_key="EMPTY",
+    )
+
+    # models = client.models.list()
+    # model = models.data[0].id
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+    )
+
+    response = response.choices[0]
+
+    if output_format:
+        return output_format.model_validate_json(response.message.content)
+    else:
+        return response.message.content
+
 def invoke_llm(
     model,  # Specify the model name from OpenRouter
     system_prompt,

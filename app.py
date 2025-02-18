@@ -55,7 +55,7 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
                 steps.append({"step": key, "content": value})
 
     # Update status to complete
-    langgraph_status.update(state="complete", label="**Using Langgraph** (Research completed)")
+    langgraph_status.update(state="complete", label="**Using Langgraph** (Thinking completed)")
 
     # Return the final report
     return steps[-1]["content"] if steps else "No response generated"
@@ -66,7 +66,7 @@ def clear_chat():
     st.session_state.uploader_key = 0
 
 def main():
-    st.set_page_config(page_title="DeepSeek RAG Researcher", layout="wide")
+    st.set_page_config(page_title="DeepSeek RAG Financial Analysis", layout="wide")
 
     # Initialize session states
     if "processing_complete" not in st.session_state:
@@ -85,14 +85,14 @@ def main():
     # Title row with clear button
     col1, col2 = st.columns([6, 1])
     with col1:
-        st.title("📄 RAG Researcher with DeepSeek R1")
+        st.title("📄 RAG Financial Analysis with DeepSeek R1")
     with col2:
         if st.button("Clear Chat", use_container_width=True):
             clear_chat()
             st.rerun()
 
     # Sidebar configuration
-    st.sidebar.title("Research Settings")
+    st.sidebar.title("Settings")
 
     # Add report structure selector to sidebar
     report_structures = get_report_structures()

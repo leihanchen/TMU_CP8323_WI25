@@ -16,6 +16,8 @@ def get_or_create_vector_db():
         vectorstore = Chroma(persist_directory=VECTOR_DB_PATH, embedding_function=embeddings)
     else:
         # Load documents and create a new vector store
+        if not os.path.exists("./files"):
+            return None
         loader = DirectoryLoader("./files")
         docs = loader.load()
 

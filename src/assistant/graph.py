@@ -25,7 +25,7 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model='deepseek-r1:7b',
+        model='deepseek-r1:1.5b',
         system_prompt=query_writer_prompt,
         user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
         output_format=Queries
@@ -87,12 +87,16 @@ def retrieve_rag_documents(state: QuerySearchState):
     print("--- Retrieving documents ---")
     query = state["query"]
     vectorstore = get_or_create_vector_db()
+    if vectorstore is None:
+        return {"retrieved_documents": None}
     vectorstore_retreiver = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
     documents = vectorstore_retreiver.invoke(query)
 
     return {"retrieved_documents": documents}
 
 def evaluate_retrieved_documents(state: QuerySearchState):
+    if state["retrieved_documents"] is None:
+        return {"are_documents_relevant": False}
     query = state["query"]
     retrieved_documents = state["retrieved_documents"]
     evaluation_prompt = RELEVANCE_EVALUATOR_PROMPT.format(
@@ -102,7 +106,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
     
     # Using local Deepseek R1 model with Ollama
     evaluation = invoke_ollama(
-        model='deepseek-r1:7b',
+        model='deepseek-r1:1.5b',
         system_prompt=evaluation_prompt,
         user_prompt=f"Evaluate the relevance of the retrieved documents for this query: {query}",
         output_format=Evaluation
@@ -155,7 +159,7 @@ def summarize_query_research(state: QuerySearchState):
     
     # Using local Deepseek R1 model with Ollama
     summary = invoke_ollama(
-        model='deepseek-r1:7b',
+        model='deepseek-r1:1.5b',
         system_prompt=summary_prompt,
         user_prompt=f"Generate a research summary for this query: {query}"
     )
@@ -182,7 +186,7 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
 
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model='deepseek-r1:7b',
+        model='deepseek-r1:1.5b',
         system_prompt=answer_prompt,
         user_prompt=f"Generate a research summary using the provided information."
     )
