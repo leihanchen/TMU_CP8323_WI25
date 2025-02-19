@@ -1,3 +1,4 @@
+jq
 pysqlite3-binary
 langgraph
 langchain-core

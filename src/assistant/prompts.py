@@ -59,11 +59,13 @@ Retrieved Documents:
 """
 
 
-REPORT_WRITER_PROMPT = """Your goal is to use the provided information and chat history to write a comprehensive and accurate report that answers all the user's questions. 
-The report must strictly follow the structure requested by the user.
+REPORT_WRITER_PROMPT = """Summarize the information based on the user's instructions and previous conversation history. Please provide accurate metrics and quantitative analysis if possible.
 
-CHAT HISTORY:
+CONVERSATION HISTORY:
 {chat_history}
+
+STRUCTURE INSTRUCTIONS:
+{structure_instruction}
 
 USER INSTRUCTION:
 {instruction}
@@ -75,9 +77,20 @@ PROVIDED INFORMATION:
 {information}
 
 # **CRITICAL GUIDELINES:**
-- Consider both the chat history and retrieved information when generating the response
-- Adhere strictly to the structure specified in the user's instruction
+{structure_guidelines}
 - Start IMMEDIATELY with the summary content - no introductions or meta-commentary
 - Focus ONLY on factual, objective information
 - Avoid redundancy, repetition, or unnecessary commentary
 """
+
+def get_structure_prompt(structure_name):
+    if structure_name.lower() == "none":
+        return {
+            "instruction": "Organize the information in a natural and flowing way that best serves the user's needs.",
+            "guidelines": "- Present information in a clear and logical manner\n- Use appropriate formatting for readability"
+        }
+    else:
+        return {
+            "instruction": "The report must strictly follow the structure requested by the user.",
+            "guidelines": "- Adhere strictly to the structure specified in the user's instruction"
+        }

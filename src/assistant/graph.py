@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from src.assistant.configuration import Configuration
 from src.assistant.vector_db import get_or_create_vector_db
 from src.assistant.state import ResearcherState, ResearcherStateInput, ResearcherStateOutput, QuerySearchState, QuerySearchStateInput, QuerySearchStateOutput
-from src.assistant.prompts import RESEARCH_QUERY_WRITER_PROMPT, RELEVANCE_EVALUATOR_PROMPT, SUMMARIZER_PROMPT, REPORT_WRITER_PROMPT
+from src.assistant.prompts import RESEARCH_QUERY_WRITER_PROMPT, RELEVANCE_EVALUATOR_PROMPT, SUMMARIZER_PROMPT, REPORT_WRITER_PROMPT, get_structure_prompt
 from src.assistant.utils import format_documents_with_metadata, invoke_llm, invoke_ollama, parse_output, tavily_search, Evaluation, Queries
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -183,7 +183,9 @@ def summarize_query_research(state: QuerySearchState):
 def generate_final_answer(state: ResearcherState, config: RunnableConfig):
     print("--- Generating final answer ---")
     report_structure = config["configurable"].get("report_structure", "")
-    
+    structure_name = config["configurable"].get("structure_name", "none")
+    structure_prompt = get_structure_prompt(structure_name)
+
     # Format chat history for the prompt
     chat_history_str = ""
     if "chat_history" in state and state["chat_history"]:
@@ -195,9 +197,11 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
     
     answer_prompt = REPORT_WRITER_PROMPT.format(
         chat_history=chat_history_str,
+        structure_instruction=structure_prompt["instruction"],
         instruction=state["user_instructions"],
         report_structure=report_structure,
-        information="\n\n---\n\n".join(state["search_summaries"])
+        information="\n\n---\n\n".join(state["search_summaries"]),
+        structure_guidelines=structure_prompt["guidelines"]
     )
 
     # Using local Deepseek R1 model with Ollama

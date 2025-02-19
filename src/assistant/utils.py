@@ -4,7 +4,7 @@ import shutil
 from ollama import chat, Client
 from tavily import TavilyClient
 from pydantic import BaseModel
-from langchain_community.document_loaders import CSVLoader, TextLoader, PDFPlumberLoader
+from langchain_community.document_loaders import CSVLoader, TextLoader, PDFPlumberLoader, JSONLoader
 from src.assistant.vector_db import add_documents
 
 class Evaluation(BaseModel):
@@ -48,7 +48,8 @@ def invoke_ollama(model, system_prompt, user_prompt, output_format=None):
     
     try:
         # Connect to remote Ollama instance
-        client = Client(host="http://141.117.231.104:11434")
+        host = os.getenv("OLLAMA_HOST", "http://141.117.231.104:11434")
+        client = Client(host=host)
         response = client.chat(
             messages=messages,
             model=model,
@@ -207,6 +208,26 @@ def process_uploaded_files(uploaded_files):
                 loader = TextLoader(temp_file_path)
             elif file_extension == "pdf":
                 loader = PDFPlumberLoader(temp_file_path)
+            elif file_extension == "json":
+                # Load JSON Lines format with jq schema to combine title and summary
+                loader = JSONLoader(
+                    file_path=temp_file_path,
+                    jq_schema=".[]",  # Load each line as a separate document
+                    json_lines=True,
+                    # text_content=False,
+                    # metadata_func=lambda metadata: {
+                    #     "ticker": metadata.get("ticker", ""),
+                    #     "date": metadata.get("date", ""),
+                    #     "title": metadata.get("title", ""),
+                    #     "source": "financial_news",
+                    # },
+                    # content_func=lambda data: (
+                    #     f"Title: {data.get('title', '')}\n\n"
+                    #     f"Summary: {data.get('summary', '')}\n\n"
+                    #     f"Ticker: {data.get('ticker', '')}\n"
+                    #     f"Date: {data.get('date', '')}"
+                    # )
+                )
             else:
                 continue
 

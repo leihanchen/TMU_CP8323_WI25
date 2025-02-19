@@ -72,6 +72,7 @@ def clear_chat():
     st.session_state.processing_complete = False
     st.session_state.uploader_key = 0
     st.session_state.chat_history = []
+    st.session_state.processed_files = set()  # Clear processed files set
 
 def main():
     st.set_page_config(page_title="DeepSeek RAG Financial Analysis", layout="wide")
@@ -88,7 +89,11 @@ def main():
     if "max_search_queries" not in st.session_state:
         st.session_state.max_search_queries = 5  # Default value of 5
     if "files_ready" not in st.session_state:
-        st.session_state.files_ready = False  # Tracks if files are uploaded but not processed
+        st.session_state.files_ready = False
+    if "file_status" not in st.session_state:
+        st.session_state.file_status = None
+    if "processed_files" not in st.session_state:
+        st.session_state.processed_files = set()  # Track processed files
 
     # Initialize chat history in session state if not present
     if "chat_history" not in st.session_state:
@@ -108,15 +113,19 @@ def main():
 
     # Add report structure selector to sidebar
     report_structures = get_report_structures()
-    default_report = "financial report"
+    default_report = "none"
 
     selected_structure = st.sidebar.selectbox(
-        "Select Report Structure",
+        "Report Structure",
         options=list(report_structures.keys()),
-        index=list(map(str.lower, report_structures.keys())).index(default_report)
+        index=list(map(str.lower, report_structures.keys())).index(default_report),
+        help="Select the structure for the generated report."
     )
 
-    st.session_state.selected_report_structure = report_structures[selected_structure]
+    st.session_state.selected_report_structure = {
+        "name": selected_structure,
+        "content": report_structures[selected_structure]
+    }
 
     # Maximum search queries input
     st.session_state.max_search_queries = st.sidebar.number_input(
@@ -132,34 +141,45 @@ def main():
     # Upload file logic
     uploaded_files = st.sidebar.file_uploader(
         "Upload New Documents",
-        type=["pdf", "txt", "csv", "md"],
+        type=["pdf", "txt", "csv", "md", "json"],
         accept_multiple_files=True,
         key=f"uploader_{st.session_state.uploader_key}"
     )
 
-    # Check if files are uploaded but not yet processed
+    # Check for new unprocessed files
     if uploaded_files:
-        st.session_state.files_ready = True  # Mark that files are available
-        st.session_state.processing_complete = False  # Reset processing status
+        current_files = {f.name for f in uploaded_files}
+        unprocessed_files = current_files - st.session_state.processed_files
+        st.session_state.files_ready = len(unprocessed_files) > 0
 
-    # Display the "Process Files" button **only if files are uploaded but not processed**
-    if st.session_state.files_ready and not st.session_state.processing_complete:
-        process_button_placeholder = st.sidebar.empty()  # Placeholder for dynamic updates
+    # Display the "Process Files" button and status
+    if uploaded_files:
+        process_button_placeholder = st.sidebar.empty()
+        current_files = {f.name for f in uploaded_files}
+        unprocessed_files = current_files - st.session_state.processed_files
 
-        with process_button_placeholder.container():
-            process_clicked = st.button("Process Files", use_container_width=True)
+        # Show process button if there are unprocessed files
+        if unprocessed_files:
+            with process_button_placeholder.container():
+                process_clicked = st.button("Process Files", use_container_width=True)
 
-        if process_clicked:
-            with process_button_placeholder:
-                with st.status("Processing files...", expanded=False) as status:
-                    # Process files (Replace this with your actual function)
-                    if process_uploaded_files(uploaded_files):
-                        st.session_state.processing_complete = True
-                        st.session_state.files_ready = False  # Reset files ready flag
-                        st.session_state.uploader_key += 1  # Reset uploader to allow new uploads
-
-                    status.update(label="Files processed successfully!", state="complete", expanded=False)
-                    # st.rerun()
+                if process_clicked:
+                    with st.sidebar.status("Processing files...", expanded=False) as status:
+                        if process_uploaded_files(uploaded_files):
+                            # Add newly processed files to the set
+                            st.session_state.processed_files.update(current_files)
+                            st.session_state.file_status = status
+                            status.update(label=f"Processed {len(unprocessed_files)} new files successfully!", state="complete", expanded=False)
+        
+        # Show status for all processed files
+        if st.session_state.processed_files:
+            if st.session_state.file_status:
+                total_processed = len(st.session_state.processed_files)
+                st.session_state.file_status.update(
+                    label=f"Total files processed: {total_processed}", 
+                    state="complete", 
+                    expanded=False
+                )
 
     # Display chat messages
     for idx, message in enumerate(st.session_state.messages):
