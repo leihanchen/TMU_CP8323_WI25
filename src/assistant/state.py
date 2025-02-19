@@ -1,6 +1,7 @@
 import operator
-from typing import Annotated
+from typing import Annotated, List
 from typing_extensions import TypedDict
+from langchain_core.messages import BaseMessage
 
 class ResearcherState(TypedDict):
     user_instructions: str
@@ -8,9 +9,11 @@ class ResearcherState(TypedDict):
     search_summaries: Annotated[list, operator.add]
     current_position: int
     final_answer: str
+    chat_history: List[BaseMessage]
 
 class ResearcherStateInput(TypedDict):
     user_instructions: str
+    chat_history: List[BaseMessage]
 
 class ResearcherStateOutput(TypedDict):
     final_answer: str

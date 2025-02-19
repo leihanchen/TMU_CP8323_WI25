@@ -1,6 +1,6 @@
-RESEARCH_QUERY_WRITER_PROMPT = """You are an expert Research Query Writer who specializes in designing precise and effective queries to fulfill user research tasks.
+RESEARCH_QUERY_WRITER_PROMPT = """You are an expert Query Writer who specializes in designing precise and effective queries to fulfill user tasks.
 
-Your goal is to generate the necessary queries to complete the user's research goal based on their instructions. Ensure the queries are concise, relevant, and avoid redundancy.
+Your goal is to generate the necessary queries to complete the user's goal based on their instructions. Ensure the queries are concise, relevant, and avoid redundancy.
 
 Your output must only be a JSON object containing a single key "queries":
 {{ "queries": ["Query 1", "Query 2",...] }}
@@ -36,7 +36,7 @@ RELEVANCE_EVALUATOR_PROMPT = """Your goal is to evaluate and determine if the pr
 """
 
 
-SUMMARIZER_PROMPT="""Your goal is to generate a focused, evidence-based research summary from the provided documents.
+SUMMARIZER_PROMPT="""Your goal is to generate a focused, evidence-based summary from the provided documents.
 
 KEY OBJECTIVES:
 1. Extract and synthesize critical findings from each source
@@ -47,6 +47,7 @@ KEY OBJECTIVES:
 REQUIREMENTS:
 - Begin immediately with key findings - no introductions
 - Focus on verifiable data and empirical evidence
+- Present more relevant metrics and results
 - Keep the summary brief, avoid repetition and unnecessary details
 - Prioritize information directly relevant to the query
 
@@ -58,8 +59,11 @@ Retrieved Documents:
 """
 
 
-REPORT_WRITER_PROMPT = """Your goal is to use the provided information to write a comprehensive and accurate report that answers all the user's questions. 
+REPORT_WRITER_PROMPT = """Your goal is to use the provided information and chat history to write a comprehensive and accurate report that answers all the user's questions. 
 The report must strictly follow the structure requested by the user.
+
+CHAT HISTORY:
+{chat_history}
 
 USER INSTRUCTION:
 {instruction}
@@ -71,8 +75,9 @@ PROVIDED INFORMATION:
 {information}
 
 # **CRITICAL GUIDELINES:**
-- Adhere strictly to the structure specified in the user's instruction.
+- Consider both the chat history and retrieved information when generating the response
+- Adhere strictly to the structure specified in the user's instruction
 - Start IMMEDIATELY with the summary content - no introductions or meta-commentary
 - Focus ONLY on factual, objective information
-- Avoid redundancy, repetition, or unnecessary commentary.
+- Avoid redundancy, repetition, or unnecessary commentary
 """

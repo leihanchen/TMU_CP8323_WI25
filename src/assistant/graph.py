@@ -3,11 +3,15 @@ from typing_extensions import Literal
 from langgraph.constants import Send
 from langgraph.graph import START, END, StateGraph
 from langchain_core.runnables.config import RunnableConfig
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from src.assistant.configuration import Configuration
 from src.assistant.vector_db import get_or_create_vector_db
 from src.assistant.state import ResearcherState, ResearcherStateInput, ResearcherStateOutput, QuerySearchState, QuerySearchStateInput, QuerySearchStateOutput
 from src.assistant.prompts import RESEARCH_QUERY_WRITER_PROMPT, RELEVANCE_EVALUATOR_PROMPT, SUMMARIZER_PROMPT, REPORT_WRITER_PROMPT
 from src.assistant.utils import format_documents_with_metadata, invoke_llm, invoke_ollama, parse_output, tavily_search, Evaluation, Queries
+from langchain_core.messages import HumanMessage, AIMessage
 
 # Number of query to process in parallel for each batch
 # Change depending on the performance of the system
@@ -25,7 +29,7 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model='deepseek-r1:1.5b',
+        model='deepseek-r1:7b',
         system_prompt=query_writer_prompt,
         user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
         output_format=Queries
@@ -95,6 +99,7 @@ def retrieve_rag_documents(state: QuerySearchState):
     return {"retrieved_documents": documents}
 
 def evaluate_retrieved_documents(state: QuerySearchState):
+    print("--- Evaluating retrieved documents ---")
     if state["retrieved_documents"] is None:
         return {"are_documents_relevant": False}
     query = state["query"]
@@ -106,7 +111,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
     
     # Using local Deepseek R1 model with Ollama
     evaluation = invoke_ollama(
-        model='deepseek-r1:1.5b',
+        model='deepseek-r1:7b',
         system_prompt=evaluation_prompt,
         user_prompt=f"Evaluate the relevance of the retrieved documents for this query: {query}",
         output_format=Evaluation
@@ -159,7 +164,7 @@ def summarize_query_research(state: QuerySearchState):
     
     # Using local Deepseek R1 model with Ollama
     summary = invoke_ollama(
-        model='deepseek-r1:1.5b',
+        model='deepseek-r1:7b',
         system_prompt=summary_prompt,
         user_prompt=f"Generate a research summary for this query: {query}"
     )
@@ -178,7 +183,18 @@ def summarize_query_research(state: QuerySearchState):
 def generate_final_answer(state: ResearcherState, config: RunnableConfig):
     print("--- Generating final answer ---")
     report_structure = config["configurable"].get("report_structure", "")
+    
+    # Format chat history for the prompt
+    chat_history_str = ""
+    if "chat_history" in state and state["chat_history"]:
+        formatted_messages = []
+        for msg in state["chat_history"]:
+            role = "User" if isinstance(msg, HumanMessage) else "Assistant"
+            formatted_messages.append(f"{role}: {msg.content}")
+        chat_history_str = "\n".join(formatted_messages)
+    
     answer_prompt = REPORT_WRITER_PROMPT.format(
+        chat_history=chat_history_str,
         instruction=state["user_instructions"],
         report_structure=report_structure,
         information="\n\n---\n\n".join(state["search_summaries"])
@@ -186,19 +202,12 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
 
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model='deepseek-r1:1.5b',
+        model='deepseek-r1:7b',
         system_prompt=answer_prompt,
-        user_prompt=f"Generate a research summary using the provided information."
+        user_prompt=f"Generate a research summary using the provided information and chat history."
     )
     # Remove thinking part (reasoning between <think> tags)
     answer = parse_output(result)["response"]
-    
-    # # Using external LLM providers with OpenRouter: GPT-4o, Claude, Deepseek R1,... 
-    # answer = invoke_llm(
-    #     model='gpt-4o-mini',
-    #     system_prompt=answer_prompt,
-    #     user_prompt=f"Generate a research summary using the provided information."
-    # )
     
     return {"final_answer": answer}
 

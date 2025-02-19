@@ -45,17 +45,34 @@ def invoke_ollama(model, system_prompt, user_prompt, output_format=None):
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
     ]
-    # client = Client(host="http://141.117.231.104:11434")
-    response = chat(
-        messages=messages,
-        model=model,
-        format=output_format.model_json_schema() if output_format else None
-    )
-
-    if output_format:
-        return output_format.model_validate_json(response.message.content)
-    else:
-        return response.message.content
+    
+    try:
+        # Connect to remote Ollama instance
+        client = Client(host="http://141.117.231.104:11434")
+        response = client.chat(
+            messages=messages,
+            model=model,
+            format=output_format.model_json_schema() if output_format else None
+        )
+        
+        if output_format:
+            return output_format.model_validate_json(response.message.content)
+        else:
+            return response.message.content
+            
+    except Exception as e:
+        print(f"Error connecting to Ollama: {str(e)}")
+        # Fallback to local instance if remote fails
+        response = chat(
+            messages=messages,
+            model=model,
+            format=output_format.model_json_schema() if output_format else None
+        )
+        
+        if output_format:
+            return output_format.model_validate_json(response.message.content)
+        else:
+            return response.message.content
 
 def invoke_vllm(model, system_prompt, user_prompt, output_format=None):
     from openai import OpenAI

@@ -4,11 +4,13 @@ from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+# from langchain_ollama import OllamaEmbeddings
 
 VECTOR_DB_PATH = "database"
  
 def get_or_create_vector_db():
     """Get or create the vector DB."""
+    # embeddings = OllamaEmbeddings(model='nomic-embed-text')
     embeddings = HuggingFaceEmbeddings()
 
     if os.path.exists(VECTOR_DB_PATH) and os.listdir(VECTOR_DB_PATH):

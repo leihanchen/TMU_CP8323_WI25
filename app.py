@@ -4,16 +4,18 @@ import streamlit_nested_layout
 from src.assistant.graph import researcher
 from src.assistant.utils import get_report_structures, process_uploaded_files
 from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage, AIMessage
 
 load_dotenv()
 
-def generate_response(user_input, enable_web_search, report_structure, max_search_queries):
+def generate_response(user_input, enable_web_search, report_structure, max_search_queries, chat_history):
     """
     Generate response using the researcher agent and stream steps
     """
     # Initialize state for the researcher
     initial_state = {
         "user_instructions": user_input,
+        "chat_history": chat_history
     }
     
     # Langgraph researcher config
@@ -64,6 +66,7 @@ def clear_chat():
     st.session_state.messages = []
     st.session_state.processing_complete = False
     st.session_state.uploader_key = 0
+    st.session_state.chat_history = []
 
 def main():
     st.set_page_config(page_title="DeepSeek RAG Financial Analysis", layout="wide")
@@ -82,6 +85,10 @@ def main():
     if "files_ready" not in st.session_state:
         st.session_state.files_ready = False  # Tracks if files are uploaded but not processed
 
+    # Initialize chat history in session state if not present
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
     # Title row with clear button
     col1, col2 = st.columns([6, 1])
     with col1:
@@ -96,7 +103,7 @@ def main():
 
     # Add report structure selector to sidebar
     report_structures = get_report_structures()
-    default_report = "standard report"
+    default_report = "financial report"
 
     selected_structure = st.sidebar.selectbox(
         "Select Report Structure",
@@ -150,18 +157,18 @@ def main():
                     # st.rerun()
 
     # Display chat messages
-    for message in st.session_state.messages:
+    for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
-            st.write(message["content"])  # Show the message normally
-
-            # Show copy button only for AI messages at the bottom
+            st.write(message["content"])
+            # Use the index to generate a unique key for each button
             if message["role"] == "assistant":
-                if st.button("📋", key=f"copy_{len(st.session_state.messages)}"):
+                if st.button("📋", key=f"copy_{idx}"):
                     pyperclip.copy(message["content"])
 
     # Chat input and response handling
     if user_input := st.chat_input("Type your message here..."):
-        # Add user message
+        # Add user message to chat history
+        st.session_state.chat_history.append(HumanMessage(content=user_input))
         st.session_state.messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.write(user_input)
@@ -172,17 +179,19 @@ def main():
             user_input, 
             enable_web_search, 
             report_structure,
-            st.session_state.max_search_queries
+            st.session_state.max_search_queries,
+            st.session_state.chat_history
         )
 
-        # Store assistant message
+        # Add assistant response to chat history
+        st.session_state.chat_history.append(AIMessage(content=assistant_response["final_answer"]))
         st.session_state.messages.append({"role": "assistant", "content": assistant_response["final_answer"]})
 
         with st.chat_message("assistant"):
             st.write(assistant_response["final_answer"])  # AI response
 
             # Copy button below the AI message
-            if st.button("📋", key=f"copy_{len(st.session_state.messages)}"):
+            if st.button("📋", key=f"copy_{len(st.session_state.messages) - 1}"):
                 pyperclip.copy(assistant_response["final_answer"])
 
 if __name__ == "__main__":
