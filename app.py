@@ -38,7 +38,7 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
         generate_queries_expander = st.expander("Generate Research Queries", expanded=False)
         search_queries_expander = st.expander("Search Queries", expanded=True)
         final_answer_expander = st.expander("Generate Final Answer", expanded=False)
-
+        final_thinking_expander = st.expander("Thinking", expanded=False)
         steps = []
 
         # Run the researcher graph and stream outputs
@@ -56,8 +56,13 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
                             st.write(value)
 
                 elif key == "generate_final_answer":
+                    value_response = {"final_answer": value["final_answer"]["response"]}
+                    value_reasoning = {"final_thinking": value["final_answer"]["reasoning"]}
                     with final_answer_expander:
-                        st.write(value)
+                        st.write(value_response)
+                    with final_thinking_expander:
+                        st.write(value_reasoning)
+
 
                 steps.append({"step": key, "content": value})
 
@@ -146,12 +151,7 @@ def main():
         key=f"uploader_{st.session_state.uploader_key}"
     )
 
-    # Check for new unprocessed files
-    if uploaded_files:
-        current_files = {f.name for f in uploaded_files}
-        unprocessed_files = current_files - st.session_state.processed_files
-        st.session_state.files_ready = len(unprocessed_files) > 0
-
+    # Check for new unprocessed files 
     # Display the "Process Files" button and status
     if uploaded_files:
         process_button_placeholder = st.sidebar.empty()
@@ -165,7 +165,7 @@ def main():
 
                 if process_clicked:
                     with st.sidebar.status("Processing files...", expanded=False) as status:
-                        if process_uploaded_files(uploaded_files):
+                        if process_uploaded_files(unprocessed_files):
                             # Add newly processed files to the set
                             st.session_state.processed_files.update(current_files)
                             st.session_state.file_status = status
@@ -209,11 +209,11 @@ def main():
         )
 
         # Add assistant response to chat history
-        st.session_state.chat_history.append(AIMessage(content=assistant_response["final_answer"]))
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response["final_answer"]})
+        st.session_state.chat_history.append(AIMessage(content=assistant_response["final_answer"]["response"]))
+        st.session_state.messages.append({"role": "assistant", "content": assistant_response["final_answer"]["response"]})
 
         with st.chat_message("assistant"):
-            st.write(assistant_response["final_answer"])  # AI response
+            st.write(assistant_response["final_answer"]["response"])  # AI response
 
             # Copy button below the AI message
             if st.button("📋", key=f"copy_{len(st.session_state.messages) - 1}"):

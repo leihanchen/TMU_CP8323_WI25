@@ -45,24 +45,24 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
 
     return {"research_queries": result.queries}
 
-def search_queries(state: ResearcherState):
-    # Kick off the search for each query by calling initiate_query_research
-    print("--- Searching queries ---")
-    pass
-
 def initiate_query_research(state: ResearcherState):
-    # Kick off the search for each query in parallel using Send method and calling the "search_and_summarize_query" subgraph
+    queries = state["research_queries"]
+    current_position = state["current_position"]
+    batch_end = min(current_position, len(queries))
+    batch_start = max(0, batch_end - BATCH_SIZE)
+    current_batch = queries[batch_start:batch_end]
+    
     return [
         Send("search_and_summarize_query", {"query": s})
-        for s in state["research_queries"]
+        for s in current_batch
     ]
 
 def search_queries(state: ResearcherState):
-    # Kick off the search for each query by calling initiate_query_research
     print("--- Searching queries ---")
-    # Get the current processing position from state or initialize to 0
     current_position = state.get("current_position", 0)
-
+    # Add search_summaries if not present
+    if "search_summaries" not in state:
+        state["search_summaries"] = []
     return {"current_position": current_position + BATCH_SIZE}
 
 
@@ -72,19 +72,6 @@ def check_more_queries(state: ResearcherState) -> Literal["search_queries", "gen
     if current_position < len(state["research_queries"]):
         return "search_queries"
     return "generate_final_answer"
-
-def initiate_query_research(state: ResearcherState):
-    # Get the next batch of queries
-    queries = state["research_queries"]
-    current_position = state["current_position"]
-    batch_end = min(current_position, len(queries))
-    current_batch = queries[current_position - BATCH_SIZE:batch_end]
-
-    # Return the batch of queries to process
-    return [
-        Send("search_and_summarize_query", {"query": s})
-        for s in current_batch
-    ]
 
 def retrieve_rag_documents(state: QuerySearchState):
     """Retrieve documents from the RAG database."""
@@ -131,8 +118,10 @@ def route_research(state: QuerySearchState, config: RunnableConfig) -> Literal["
     """ Route the research based on the documents relevance """
 
     if state["are_documents_relevant"]:
+        print("Documents are relevant. Proceeding to summarize.")
         return "summarize_query_research"
     elif config["configurable"].get("enable_web_search", False):
+        print("Documents are not relevant. Finding web search results.")
         return "web_research"
     else:
         print("Skipping query due to irrelevant documents and web search disabled.")
@@ -147,14 +136,10 @@ def web_research(state: QuerySearchState):
 
 def summarize_query_research(state: QuerySearchState):
     query = state["query"]
-
     information = None
     if state["are_documents_relevant"]:
-        # If documents are relevant: Use RAG documents
         information = state["retrieved_documents"]
     else:
-        # If documents are irrelevant: Use web search results,
-        # if enabled, otherwise query will be skipped in the previous router node
         information = state["web_search_results"]
 
     summary_prompt = SUMMARIZER_PROMPT.format(
@@ -162,26 +147,27 @@ def summarize_query_research(state: QuerySearchState):
         docmuents=information
     )
     
-    # Using local Deepseek R1 model with Ollama
     summary = invoke_ollama(
         model='deepseek-r1:7b',
         system_prompt=summary_prompt,
-        user_prompt=f"Generate a research summary for this query: {query}"
+        user_prompt=f"Generate a summary for this query: {query}"
     )
-    # Remove thinking part (reasoning between <think> tags)
     summary = parse_output(summary)["response"]
     
-    # Using external LLM providers with OpenRouter: GPT-4o, Claude, Deepseek R1,... 
-    # summary = invoke_llm(
-    #     model='gpt-4o-mini',
-    #     system_prompt=summary_prompt,
-    #     user_prompt=f"Generate a research summary for this query: {query}"
-    # )
-
-    return {"search_summaries": [summary]}
+    return {
+        "query": query,  # Include query for tracking
+        "search_summaries": summary
+    }
 
 def generate_final_answer(state: ResearcherState, config: RunnableConfig):
     print("--- Generating final answer ---")
+    
+    # Validate required state
+    if not state.get("search_summaries"):
+        return {
+            "final_answer": "Unable to generate answer: No research summaries available"
+        }
+    
     report_structure = config["configurable"].get("report_structure", "")
     structure_name = config["configurable"].get("structure_name", "none")
     structure_prompt = get_structure_prompt(structure_name)
@@ -211,9 +197,15 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
         user_prompt=f"Generate a research summary using the provided information and chat history."
     )
     # Remove thinking part (reasoning between <think> tags)
-    answer = parse_output(result)["response"]
-    
-    return {"final_answer": answer}
+    parsing_result = parse_output(result)
+    # answer = parsing_result["response"]
+    return {"final_answer": parsing_result}
+
+def route_web_research(state: QuerySearchState) -> Literal["summarize_query_research", "__end__"]:
+    """Route after web research based on results"""
+    if state.get("web_search_results"):
+        return "summarize_query_research"
+    return "__end__"
 
 # Create subghraph for searching each query
 query_search_subgraph = StateGraph(QuerySearchState, input=QuerySearchStateInput, output=QuerySearchStateOutput)
@@ -227,8 +219,20 @@ query_search_subgraph.add_node(summarize_query_research)
 # Set entry point and define transitions for the subgraph
 query_search_subgraph.add_edge(START, "retrieve_rag_documents")
 query_search_subgraph.add_edge("retrieve_rag_documents", "evaluate_retrieved_documents")
-query_search_subgraph.add_conditional_edges("evaluate_retrieved_documents", route_research)
-query_search_subgraph.add_edge("web_research", "summarize_query_research")
+query_search_subgraph.add_conditional_edges(
+    "evaluate_retrieved_documents",
+    route_research,
+    {
+        "summarize_query_research": "summarize_query_research",
+        "web_research": "web_research",
+        "__end__": END,
+    },
+)
+query_search_subgraph.add_conditional_edges(
+    "web_research",
+    route_web_research,
+    {"summarize_query_research": "summarize_query_research", "__end__": END},
+)
 query_search_subgraph.add_edge("summarize_query_research", END)
 
 # Create main research agent graph
