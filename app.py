@@ -157,7 +157,7 @@ def main():
         process_button_placeholder = st.sidebar.empty()
         current_files = {f.name for f in uploaded_files}
         unprocessed_files = current_files - st.session_state.processed_files
-
+        
         # Show process button if there are unprocessed files
         if unprocessed_files:
             with process_button_placeholder.container():
@@ -165,7 +165,7 @@ def main():
 
                 if process_clicked:
                     with st.sidebar.status("Processing files...", expanded=False) as status:
-                        if process_uploaded_files(unprocessed_files):
+                        if process_uploaded_files(uploaded_files, unprocessed_files):
                             # Add newly processed files to the set
                             st.session_state.processed_files.update(current_files)
                             st.session_state.file_status = status

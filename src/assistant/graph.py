@@ -156,7 +156,7 @@ def summarize_query_research(state: QuerySearchState):
     
     return {
         "query": query,  # Include query for tracking
-        "search_summaries": summary
+        "search_summaries": [summary]
     }
 
 def generate_final_answer(state: ResearcherState, config: RunnableConfig):

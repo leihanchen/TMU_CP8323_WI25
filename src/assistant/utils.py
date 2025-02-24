@@ -188,12 +188,14 @@ def get_report_structures(reports_folder="report_structures"):
 
     return report_structures
 
-def process_uploaded_files(uploaded_files):
+def process_uploaded_files(uploaded_files, unprocessed_files_str):
     temp_folder = "temp_files"
     os.makedirs(temp_folder, exist_ok=True)
 
     try:
         for uploaded_file in uploaded_files:
+            if uploaded_file.name not in unprocessed_files_str:
+                continue
             file_extension = uploaded_file.name.split(".")[-1].lower()
             temp_file_path = os.path.join(temp_folder, uploaded_file.name)
 
