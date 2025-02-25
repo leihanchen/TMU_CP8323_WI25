@@ -91,7 +91,8 @@ def evaluate_retrieved_documents(state: QuerySearchState):
         return {"are_documents_relevant": False}
     query = state["query"]
     retrieved_documents = state["retrieved_documents"]
-    # print("Retrieved documents:", retrieved_documents)
+    print("Retrieved documents:", retrieved_documents)
+    
     evaluation_prompt = RELEVANCE_EVALUATOR_PROMPT.format(
         query=query,
         documents=format_documents_with_metadata(retrieved_documents)

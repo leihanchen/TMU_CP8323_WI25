@@ -10,6 +10,7 @@ from src.assistant.graph import researcher
 from src.assistant.utils import get_report_structures, process_uploaded_files
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
+from pyngrok import ngrok
 
 load_dotenv()
 
@@ -218,6 +219,12 @@ def main():
             # Copy button below the AI message
             if st.button("📋", key=f"copy_{len(st.session_state.messages) - 1}"):
                 pyperclip.copy(assistant_response["final_answer"])
+    
+    # Show display the ngrok link inside your Streamlit app UI.
+    ngrok.set_auth_token("2tXPwDst3Zu00YOYMDzYjCnQZ96_Sz2BVfU7jCHmg5bBmffc")
+    tunnel = ngrok.connect(8501, "http")
+    public_url = tunnel.public_url
+    st.sidebar.markdown(f"**Public URL:** {public_url}")
 
 if __name__ == "__main__":
     main()
