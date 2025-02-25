@@ -56,8 +56,9 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
                             st.write(value)
 
                 elif key == "generate_final_answer":
-                    value_response = {"final_answer": value["final_answer"]["response"]}
-                    value_reasoning = {"final_thinking": value["final_answer"]["reasoning"]}
+                    is_dict_instance = isinstance(value["final_answer"], dict)
+                    value_response = {"final_answer": value["final_answer"]["response"]} if is_dict_instance else {"final_answer":value["final_answer"]}
+                    value_reasoning = {"final_thinking": value["final_answer"]["reasoning"]} if is_dict_instance else {"final_thinking": value["final_answer"]}
                     with final_answer_expander:
                         st.write(value_response)
                     with final_thinking_expander:
@@ -92,7 +93,7 @@ def main():
     if "selected_report_structure" not in st.session_state:
         st.session_state.selected_report_structure = None
     if "max_search_queries" not in st.session_state:
-        st.session_state.max_search_queries = 5  # Default value of 5
+        st.session_state.max_search_queries = 3  # Default value of 3
     if "files_ready" not in st.session_state:
         st.session_state.files_ready = False
     if "file_status" not in st.session_state:
@@ -157,7 +158,6 @@ def main():
         process_button_placeholder = st.sidebar.empty()
         current_files = {f.name for f in uploaded_files}
         unprocessed_files = current_files - st.session_state.processed_files
-        
         # Show process button if there are unprocessed files
         if unprocessed_files:
             with process_button_placeholder.container():

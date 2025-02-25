@@ -91,6 +91,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
         return {"are_documents_relevant": False}
     query = state["query"]
     retrieved_documents = state["retrieved_documents"]
+    # print("Retrieved documents:", retrieved_documents)
     evaluation_prompt = RELEVANCE_EVALUATOR_PROMPT.format(
         query=query,
         documents=format_documents_with_metadata(retrieved_documents)
@@ -135,6 +136,7 @@ def web_research(state: QuerySearchState):
     return {"web_search_results": search_results}
 
 def summarize_query_research(state: QuerySearchState):
+    print("--- Summarizing query research ---")
     query = state["query"]
     information = None
     if state["are_documents_relevant"]:
@@ -153,7 +155,7 @@ def summarize_query_research(state: QuerySearchState):
         user_prompt=f"Generate a summary for this query: {query}"
     )
     summary = parse_output(summary)["response"]
-    
+    print("Summary of query search:", summary)
     return {
         "query": query,  # Include query for tracking
         "search_summaries": [summary]

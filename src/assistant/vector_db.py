@@ -52,7 +52,7 @@ def add_documents(documents):
     # Split resulting documents into smaller chunks SemanticChunker
     # doesn't have a max chunk size parameter, so we use 
     # RecursiveCharacterTextSplitter to avoid having large chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
     split_documents = text_splitter.split_documents(documents)
 
     if os.path.exists(VECTOR_DB_PATH) and os.listdir(VECTOR_DB_PATH):
