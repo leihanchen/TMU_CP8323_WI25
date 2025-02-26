@@ -30,7 +30,7 @@ def get_or_create_vector_db():
         # Split resulting documents into smaller chunks SemanticChunker
         # doesn't have a max chunk size parameter, so we use 
         # RecursiveCharacterTextSplitter to avoid having large chunks
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=40)
         split_documents = text_splitter.split_documents(documents)
         vectorstore = Chroma.from_documents(split_documents, embeddings, persist_directory=VECTOR_DB_PATH)
 

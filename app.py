@@ -5,7 +5,6 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import pyperclip
 import streamlit as st
-import streamlit_nested_layout
 from src.assistant.graph import researcher
 from src.assistant.utils import get_report_structures, process_uploaded_files
 from dotenv import load_dotenv

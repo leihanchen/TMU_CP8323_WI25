@@ -1,0 +1,1 @@
+No specific structure required. The response should be natural and informative based on the available information.
