@@ -1,5 +1,6 @@
 jq
 pysqlite3-binary
+pyngrok
 langgraph
 langchain-core
 langchain_openai
