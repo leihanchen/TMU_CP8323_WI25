@@ -5,6 +5,7 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import pyperclip
 import streamlit as st
+import streamlit_nested_layout
 from src.assistant.graph import researcher
 from src.assistant.utils import get_report_structures, process_uploaded_files
 from dotenv import load_dotenv
@@ -100,10 +101,13 @@ def main():
         st.session_state.file_status = None
     if "processed_files" not in st.session_state:
         st.session_state.processed_files = set()  # Track processed files
-
-    # Initialize chat history in session state if not present
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+    
+    # Initialize ngrok connection flag
+    if "ngrok_connected" not in st.session_state:
+        st.session_state.ngrok_connected = False
+        st.session_state.public_url = None
 
     # Title row with clear button
     col1, col2 = st.columns([6, 1])
@@ -181,6 +185,15 @@ def main():
                     expanded=False
                 )
 
+    # Connect ngrok only if not already connected
+    if not st.session_state.ngrok_connected:
+        ngrok.set_auth_token("2tXPwDst3Zu00YOYMDzYjCnQZ96_Sz2BVfU7jCHmg5bBmffc")
+        tunnel = ngrok.connect(8501, "http")
+        public_url = tunnel.public_url
+        st.session_state.public_url = public_url
+        st.session_state.ngrok_connected = True  # Set the flag to True
+        
+
     # Display chat messages
     for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
@@ -219,11 +232,8 @@ def main():
             if st.button("📋", key=f"copy_{len(st.session_state.messages) - 1}"):
                 pyperclip.copy(assistant_response["final_answer"])
     
-    # Show display the ngrok link inside your Streamlit app UI.
-    ngrok.set_auth_token("2tXPwDst3Zu00YOYMDzYjCnQZ96_Sz2BVfU7jCHmg5bBmffc")
-    tunnel = ngrok.connect(8501, "http")
-    public_url = tunnel.public_url
-    st.sidebar.markdown(f"**Public URL:** {public_url}")
+    if st.session_state.public_url is not None:
+        st.sidebar.markdown(f"**Public URL:** {st.session_state.public_url}")
 
 if __name__ == "__main__":
     main()
