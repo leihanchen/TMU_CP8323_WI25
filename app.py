@@ -222,15 +222,16 @@ def main():
         )
 
         # Add assistant response to chat history
-        st.session_state.chat_history.append(AIMessage(content=assistant_response["final_answer"]["response"]))
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response["final_answer"]["response"]})
+        assistant_response = assistant_response["final_answer"]["response"] if isinstance(assistant_response, dict) else assistant_response["final_answer"]
+        st.session_state.chat_history.append(AIMessage(content=assistant_response))
+        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
 
         with st.chat_message("assistant"):
-            st.write(assistant_response["final_answer"]["response"])  # AI response
+            st.write(assistant_response)  # AI response
 
             # Copy button below the AI message
             if st.button("📋", key=f"copy_{len(st.session_state.messages) - 1}"):
-                pyperclip.copy(assistant_response["final_answer"])
+                pyperclip.copy(assistant_response)
     
     if st.session_state.public_url is not None:
         st.sidebar.markdown(f"**Public URL:** {st.session_state.public_url}")
