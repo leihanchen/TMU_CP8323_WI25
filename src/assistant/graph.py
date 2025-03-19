@@ -58,8 +58,8 @@ def initiate_query_research(state: ResearcherState):
     ]
 
 def search_queries(state: ResearcherState):
-    print("--- Searching queries ---")
     current_position = state.get("current_position", 0)
+    print("--- Searching queries with current position --- ", current_position)
     # Add search_summaries if not present
     if "search_summaries" not in state:
         state["search_summaries"] = []
@@ -91,7 +91,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
         return {"are_documents_relevant": False}
     query = state["query"]
     retrieved_documents = state["retrieved_documents"]
-    print("Retrieved documents:", retrieved_documents)
+    # print("Retrieved documents:", retrieved_documents)
     
     evaluation_prompt = RELEVANCE_EVALUATOR_PROMPT.format(
         query=query,
@@ -117,37 +117,52 @@ def evaluate_retrieved_documents(state: QuerySearchState):
     return {"are_documents_relevant": evaluation.is_relevant}
 
 def route_research(state: QuerySearchState, config: RunnableConfig) -> Literal["summarize_query_research", "web_research", "__end__"]:
-    """ Route the research based on the documents relevance """
-
-    if state["are_documents_relevant"]:
+    """ Route the research based on the documents relevance and web search availability """
+    enable_web_search = config["configurable"].get("enable_web_search", False)
+    
+    if state["are_documents_relevant"] and enable_web_search:
+        print("Documents are relevant and web search is enabled. Proceeding to web search.")
+        return "web_research"
+    elif state["are_documents_relevant"]:
         print("Documents are relevant. Proceeding to summarize.")
         return "summarize_query_research"
-    elif config["configurable"].get("enable_web_search", False):
+    elif enable_web_search:
         print("Documents are not relevant. Finding web search results.")
         return "web_research"
     else:
-        print("Skipping query due to irrelevant documents and web search disabled.")
+        print("No relevant documents and web search disabled. Skipping query.")
         return "__end__"
 
 def web_research(state: QuerySearchState):
     print("--- Web research ---")
     output = tavily_search(state["query"])
     search_results = output["results"]
-
+    print("Web search results:", search_results)
     return {"web_search_results": search_results}
 
 def summarize_query_research(state: QuerySearchState):
     print("--- Summarizing query research ---")
     query = state["query"]
-    information = None
-    if state["are_documents_relevant"]:
-        information = state["retrieved_documents"]
-    else:
-        information = state["web_search_results"]
+    information = []
+    
+    # Add relevant documents if available
+    if state["are_documents_relevant"] and state["retrieved_documents"]:
+        information.append(format_documents_with_metadata(state["retrieved_documents"]))
+    
+    # Add web search results if available
+    if state.get("web_search_results"):
+        web_results = "\n\n".join([
+            f"Source: {result['url']}\nContent: {result['content']}"
+            for result in state["web_search_results"]
+        ])
+        information.append(web_results)
 
+    # Combine all information
+    combined_info = "\n\n---\n\n".join(information)
+    
     summary_prompt = SUMMARIZER_PROMPT.format(
         query=query,
-        docmuents=information
+        docmuents=combined_info
     )
     
     summary = invoke_ollama(
