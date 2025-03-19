@@ -204,9 +204,9 @@ def main():
     # Connect ngrok only if not already connected
     if not st.session_state.ngrok_connected:
         ngrok.set_auth_token("2tXPwDst3Zu00YOYMDzYjCnQZ96_Sz2BVfU7jCHmg5bBmffc")
-        tunnel = ngrok.connect(8501, "http")
-        public_url = tunnel.public_url
-        st.session_state.public_url = public_url
+        # tunnel = ngrok.connect(8501, "http")
+        # public_url = tunnel.public_url
+        st.session_state.public_url = "https://403c-141-117-231-104.ngrok-free.app"
         st.session_state.ngrok_connected = True  # Set the flag to True
         
 
