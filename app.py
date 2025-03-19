@@ -6,6 +6,7 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import pyperclip
 import streamlit as st
 import streamlit_nested_layout
+import pandas as pd
 from src.assistant.graph import researcher
 from src.assistant.utils import get_report_structures, process_uploaded_files
 from dotenv import load_dotenv
@@ -80,6 +81,21 @@ def clear_chat():
     st.session_state.uploader_key = 0
     st.session_state.chat_history = []
     st.session_state.processed_files = set()  # Clear processed files set
+
+def fetch_ticker():
+    # URL of the Wikipedia page containing S&P 500 companies
+    url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
+
+    # Read all tables on the page
+    tables = pd.read_html(url)
+
+    # The first table usually contains the list of S&P 500 companies
+    sp500_table = tables[0]
+
+    # Extract the 'Symbol' column and convert it to a list of strings
+    tickers = sp500_table['Symbol'].tolist()
+
+    return tickers
 
 def main():
     st.set_page_config(page_title="DeepSeek RAG Financial Analysis", layout="wide")
@@ -235,6 +251,13 @@ def main():
     
     if st.session_state.public_url is not None:
         st.sidebar.markdown(f"**Public URL:** {st.session_state.public_url}")
+    
+    # Fetch tickers for user to select
+    tickers = fetch_ticker()
+    selected_ticker = st.sidebar.selectbox("Select Ticker", tickers)
+
+    # Display the selected ticker
+    st.sidebar.write(f"You selected: {selected_ticker}")
 
 if __name__ == "__main__":
     main()
