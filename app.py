@@ -162,7 +162,7 @@ def main():
         help="Set the maximum number of search queries to be made. (1-10)"
     )
     
-    enable_web_search = st.sidebar.checkbox("Enable Web Search", value=False)
+    enable_web_search = st.sidebar.checkbox("Enable Web Search", value=True)
 
     # Upload file logic
     uploaded_files = st.sidebar.file_uploader(

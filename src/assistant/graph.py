@@ -137,7 +137,7 @@ def web_research(state: QuerySearchState):
     print("--- Web research ---")
     output = tavily_search(state["query"])
     search_results = output["results"]
-    print("Web search results:", search_results)
+    # print("Web search results:", search_results)
     return {"web_search_results": search_results}
 
 def summarize_query_research(state: QuerySearchState):
