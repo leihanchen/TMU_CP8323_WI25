@@ -55,32 +55,69 @@ Query:
 {query}
 
 Retrieved Documents:
-{docmuents}
+{documents}
 """
 
 
-REPORT_WRITER_PROMPT = """Summarize the information based on the user's instructions and previous conversation history. Please provide accurate metrics and quantitative analysis if possible.
+# REPORT_WRITER_PROMPT = """Summarize the information based on the user's instructions and previous conversation history. Please provide accurate metrics and quantitative analysis if possible.
 
-CONVERSATION HISTORY:
-{chat_history}
+# CONVERSATION HISTORY:
+# {chat_history}
 
-STRUCTURE INSTRUCTIONS:
-{structure_instruction}
+# STRUCTURE INSTRUCTIONS:
+# {structure_instruction}
 
-USER INSTRUCTION:
+# USER INSTRUCTION:
+# {instruction}
+
+# REPORT STRUCTURE:
+# {report_structure}
+
+# PROVIDED INFORMATION:
+# {information}
+
+# # **CRITICAL GUIDELINES:**
+# {structure_guidelines}
+# - Start IMMEDIATELY with the summary content - no introductions or meta-commentary
+# - Focus ONLY on factual, objective information
+# - Avoid redundancy, repetition, or unnecessary commentary
+# """
+
+REPORT_WRITER_PROMPT = """
+You are a financial analysis assistant tasked with answering **predictive financial questions** using retrieved documents and your own reasoning.
+
+# GOAL:
+Answer the user's question about future values (e.g., stock price, financial performance) using:
+
+1. Evidence from the provided documents (filings, news, market data)
+2. Your own logical estimation and financial reasoning
+3. Clearly explain how you derived the answer
+
+---
+
+# USER QUESTION:
 {instruction}
 
-REPORT STRUCTURE:
-{report_structure}
-
-PROVIDED INFORMATION:
+# RETRIEVED INFORMATION:
 {information}
 
-# **CRITICAL GUIDELINES:**
-{structure_guidelines}
-- Start IMMEDIATELY with the summary content - no introductions or meta-commentary
-- Focus ONLY on factual, objective information
-- Avoid redundancy, repetition, or unnecessary commentary
+# CONVERSATION HISTORY:
+{chat_history}
+
+---
+
+# RESPONSE REQUIREMENTS:
+- Start directly with the **prediction**
+- Include a **justification** using any relevant documents (quote snippets, name sources)
+- Include **math or reasoning** used to estimate, e.g., trends, growth rate extrapolation
+- End with a **confidence score (High / Medium / Low)** and why
+
+---
+
+# OUTPUT FORMAT (strict):
+Prediction: <your forecast>  
+Justification: <why you made this forecast — include any math, logic, or quotes from documents>  
+Confidence: <High / Medium / Low> - <reason for confidence level>
 """
 
 def get_structure_prompt(structure_name):

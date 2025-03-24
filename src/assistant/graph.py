@@ -18,32 +18,8 @@ from langchain_core.messages import HumanMessage, AIMessage
 BATCH_SIZE = 3
 
 def generate_research_queries(state: ResearcherState, config: RunnableConfig):
-    print("--- Generating research queries ---")
-    user_instructions = state["user_instructions"]
-    max_queries = config["configurable"].get("max_search_queries", 3)
-    
-    query_writer_prompt = RESEARCH_QUERY_WRITER_PROMPT.format(
-        max_queries=max_queries,
-        date=datetime.datetime.now().strftime("%Y/%m/%d %H:%M")
-    )
-    
-    # Using local Deepseek R1 model with Ollama
-    result = invoke_ollama(
-        model='deepseek-r1:7b',
-        system_prompt=query_writer_prompt,
-        user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
-        output_format=Queries
-    )
-    
-    # Using external LLM providers with OpenRouter: GPT-4o, Claude, Deepseek R1,... 
-    # result = invoke_llm(
-    #     model='gpt-4o-mini',
-    #     system_prompt=query_writer_prompt,
-    #     user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
-    #     output_format=Queries
-    # )
-
-    return {"research_queries": result.queries}
+    print("--- Using user input as direct query ---")
+    return {"research_queries": [state["user_instructions"]]}
 
 def initiate_query_research(state: ResearcherState):
     queries = state["research_queries"]
@@ -100,7 +76,9 @@ def evaluate_retrieved_documents(state: QuerySearchState):
     
     # Using local Deepseek R1 model with Ollama
     evaluation = invoke_ollama(
-        model='deepseek-r1:7b',
+        # model='deepseek-r1:7b',
+        model='gemma3:1b',
+        # model='llama3.2',
         system_prompt=evaluation_prompt,
         user_prompt=f"Evaluate the relevance of the retrieved documents for this query: {query}",
         output_format=Evaluation
@@ -166,7 +144,9 @@ def summarize_query_research(state: QuerySearchState):
     )
     
     summary = invoke_ollama(
-        model='deepseek-r1:7b',
+        # model='deepseek-r1:7b',
+        model='gemma3:1b',
+        # model='llama3.2',
         system_prompt=summary_prompt,
         user_prompt=f"Generate a summary for this query: {query}"
     )
@@ -210,7 +190,9 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
 
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model='deepseek-r1:7b',
+        # model='deepseek-r1:7b',
+        model='gemma3:1b',
+        # model='llama3.2',
         system_prompt=answer_prompt,
         user_prompt=f"Generate a research summary using the provided information and chat history."
     )

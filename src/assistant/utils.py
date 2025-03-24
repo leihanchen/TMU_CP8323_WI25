@@ -14,13 +14,18 @@ class Queries(BaseModel):
     queries: list[str]
 
 def parse_output(text):
-    think = re.search(r'<think>(.*?)</think>', text, re.DOTALL).group(1).strip()
-    output = re.search(r'</think>\s*(.*?)$', text, re.DOTALL).group(1).strip()
-
     return {
-        "reasoning": think,
-        "response": output
+        "reasoning": "",
+        "response": text
     }
+ 
+    # think = re.search(r'<think>(.*?)</think>', text, re.DOTALL).group(1).strip()
+    # output = re.search(r'</think>\s*(.*?)$', text, re.DOTALL).group(1).strip()
+
+    # return {
+    #     "reasoning": think,
+    #     "response": output
+    # }
 
 def format_documents_with_metadata(documents):
     """
