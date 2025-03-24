@@ -83,6 +83,23 @@ PROVIDED INFORMATION:
 - Avoid redundancy, repetition, or unnecessary commentary
 """
 
+FINANCIAL_PROMPT = """Summarize the stock financial performance and predict its financial sentiment and stock price
+
+CONVERSATION HISTORY:
+{chat_history}
+
+USER INSTRUCTION:
+{instruction}
+
+PROVIDED INFORMATION:
+{information}
+
+# **CRITICAL GUIDELINES:**
+- Focus ONLY on factual, objective information
+- Avoid redundancy, repetition, or unnecessary commentary
+- List financial relevant metrics and results in the summary
+"""
+
 def get_structure_prompt(structure_name):
     if structure_name.lower() == "none":
         return {

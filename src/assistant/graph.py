@@ -9,13 +9,14 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from src.assistant.configuration import Configuration
 from src.assistant.vector_db import get_or_create_vector_db
 from src.assistant.state import ResearcherState, ResearcherStateInput, ResearcherStateOutput, QuerySearchState, QuerySearchStateInput, QuerySearchStateOutput
-from src.assistant.prompts import RESEARCH_QUERY_WRITER_PROMPT, RELEVANCE_EVALUATOR_PROMPT, SUMMARIZER_PROMPT, REPORT_WRITER_PROMPT, get_structure_prompt
-from src.assistant.utils import format_documents_with_metadata, invoke_llm, invoke_ollama, parse_output, tavily_search, Evaluation, Queries
+from src.assistant.prompts import RESEARCH_QUERY_WRITER_PROMPT, RELEVANCE_EVALUATOR_PROMPT, SUMMARIZER_PROMPT, REPORT_WRITER_PROMPT, FINANCIAL_PROMPT, get_structure_prompt
+from src.assistant.utils import format_documents_with_metadata, invoke_llm, invoke_ollama, parse_output, tavily_search, Evaluation, Queries, StockPrice, parse_stock_price
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Number of query to process in parallel for each batch
 # Change depending on the performance of the system
 BATCH_SIZE = 3
+MODEL_ID = "deepseek-r1:7b"
 
 def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     print("--- Generating research queries ---")
@@ -29,7 +30,7 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model='deepseek-r1:7b',
+        model=MODEL_ID,
         system_prompt=query_writer_prompt,
         user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
         output_format=Queries
@@ -100,7 +101,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
     
     # Using local Deepseek R1 model with Ollama
     evaluation = invoke_ollama(
-        model='deepseek-r1:7b',
+        model=MODEL_ID,
         system_prompt=evaluation_prompt,
         user_prompt=f"Evaluate the relevance of the retrieved documents for this query: {query}",
         output_format=Evaluation
@@ -166,7 +167,7 @@ def summarize_query_research(state: QuerySearchState):
     )
     
     summary = invoke_ollama(
-        model='deepseek-r1:7b',
+        model=MODEL_ID,
         system_prompt=summary_prompt,
         user_prompt=f"Generate a summary for this query: {query}"
     )
@@ -199,23 +200,31 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
             formatted_messages.append(f"{role}: {msg.content}")
         chat_history_str = "\n".join(formatted_messages)
     
-    answer_prompt = REPORT_WRITER_PROMPT.format(
+    # answer_prompt = REPORT_WRITER_PROMPT.format(
+    #     chat_history=chat_history_str,
+    #     structure_instruction=structure_prompt["instruction"],
+    #     instruction=state["user_instructions"],
+    #     report_structure=report_structure,
+    #     information="\n\n---\n\n".join(state["search_summaries"]),
+    #     structure_guidelines=structure_prompt["guidelines"]
+    # )
+
+    answer_prompt = FINANCIAL_PROMPT.format(
         chat_history=chat_history_str,
-        structure_instruction=structure_prompt["instruction"],
         instruction=state["user_instructions"],
-        report_structure=report_structure,
-        information="\n\n---\n\n".join(state["search_summaries"]),
-        structure_guidelines=structure_prompt["guidelines"]
+        information="\n\n---\n\n".join(state["search_summaries"])
     )
 
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model='deepseek-r1:7b',
+        model=MODEL_ID,
         system_prompt=answer_prompt,
-        user_prompt=f"Generate a research summary using the provided information and chat history."
+        user_prompt=f"Generate a prediction using the provided information and chat history with certain format",
+        output_format=StockPrice
     )
     # Remove thinking part (reasoning between <think> tags)
-    parsing_result = parse_output(result)
+    # parsing_result = parse_output(result)
+    parsing_result = parse_stock_price(result)
     # answer = parsing_result["response"]
     return {"final_answer": parsing_result}
 

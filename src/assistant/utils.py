@@ -3,7 +3,8 @@ import re
 import shutil
 from ollama import chat, Client
 from tavily import TavilyClient
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 from langchain_community.document_loaders import CSVLoader, TextLoader, PDFPlumberLoader, JSONLoader
 from src.assistant.vector_db import add_documents
 
@@ -13,6 +14,30 @@ class Evaluation(BaseModel):
 class Queries(BaseModel):
     queries: list[str]
 
+
+class StockPrice(BaseModel):
+    summary: str = Field(
+        ...,
+        examples=["The stock financial situation is ..."],
+        desription="The summary of the stock financial performance ",
+    )
+    ticker: str = Field(
+        ..., examples=["NVDA", "AMD"], description="The stock ticker", required=True
+    )
+    price: float = Field(
+        ...,
+        examples=[100.0, 200.0],
+        description="The predicted stock price",
+        required=True,
+    )
+    currency: str = Field(
+        ..., examples=["USD", "EUR"], description="The currency of the stock price"
+    )
+    sentiment: Literal["positive", "negative", "neutral"] = Field(description="The sentiment of the stock financial performance")
+    confidence_score: float = Field(description="The confidence score of the stock financial performance")
+    think: str = Field(description="The model's internal chain-of-thought reasoning")
+
+
 def parse_output(text):
     think = re.search(r'<think>(.*?)</think>', text, re.DOTALL).group(1).strip()
     output = re.search(r'</think>\s*(.*?)$', text, re.DOTALL).group(1).strip()
@@ -21,6 +46,9 @@ def parse_output(text):
         "reasoning": think,
         "response": output
     }
+
+def parse_stock_price(stockprice: StockPrice):
+    return stockprice.model_dump()
 
 def format_documents_with_metadata(documents):
     """

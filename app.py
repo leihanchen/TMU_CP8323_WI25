@@ -59,8 +59,12 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
 
                 elif key == "generate_final_answer":
                     is_dict_instance = isinstance(value["final_answer"], dict)
-                    value_response = {"final_answer": value["final_answer"]["response"]} if is_dict_instance else {"final_answer":value["final_answer"]}
-                    value_reasoning = {"final_thinking": value["final_answer"]["reasoning"]} if is_dict_instance else {"final_thinking": value["final_answer"]}
+                    # value_response = {"final_answer": value["final_answer"]["response"]} if is_dict_instance else {"final_answer":value["final_answer"]}
+                    # value_reasoning = {"final_thinking": value["final_answer"]["reasoning"]} if is_dict_instance else {"final_thinking": value["final_answer"]}
+                    value_reasoning = value["final_answer"]["think"] if is_dict_instance and (value["final_answer"].get("think") is not None) else "No reasoning generated"
+                    if is_dict_instance:
+                        value["final_answer"].pop("think", "Think trace not found")
+                    value_response = value["final_answer"] if is_dict_instance else "No response generated"
                     with final_answer_expander:
                         st.write(value_response)
                     with final_thinking_expander:
@@ -238,9 +242,10 @@ def main():
         )
 
         # Add assistant response to chat history
-        assistant_response = assistant_response["final_answer"]["response"] if isinstance(assistant_response, dict) else assistant_response["final_answer"]
-        st.session_state.chat_history.append(AIMessage(content=assistant_response))
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+        if isinstance(assistant_response, dict):
+            print("Predicted price: ", assistant_response["final_answer"])
+        st.session_state.chat_history.append(AIMessage(content=str(assistant_response)))
+        st.session_state.messages.append({"role": "assistant", "content": str(assistant_response)})
 
         with st.chat_message("assistant"):
             st.write(assistant_response)  # AI response
@@ -255,6 +260,8 @@ def main():
     # Fetch tickers for user to select
     tickers = fetch_ticker()
     selected_ticker = st.sidebar.selectbox("Select Ticker", tickers)
+
+
 
     # Display the selected ticker
     st.sidebar.write(f"You selected: {selected_ticker}")
