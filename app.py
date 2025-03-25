@@ -27,7 +27,7 @@ def find_reports_for_ticker(ticker):
     Returns a dictionary of {Year_ReportType: file_path}
     """
     reports = {}
-    pattern = re.compile(f"^{ticker}_\d+_(10K|DEF14A|YFinance)\\_parsed.(json|csv)$")
+    pattern = re.compile(f"^{ticker}_\d+_(10K|DEF14A|YFinance|News)\\_parsed.(json|csv)$")
 
     for file in os.listdir(REPORTS_PATH):
         if pattern.match(file):
