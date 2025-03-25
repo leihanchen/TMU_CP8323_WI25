@@ -17,7 +17,7 @@ class Queries(BaseModel):
 
 
 class StockPrice(BaseModel):
-    summary: str = Field(
+    stock_summary: str = Field(
         ...,
         examples=["The stock financial situation is ..."],
         desription="The summary of the stock financial performance ",

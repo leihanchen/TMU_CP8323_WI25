@@ -3,7 +3,6 @@ RESEARCH_QUERY_WRITER_PROMPT = """You are an expert Query Writer who specializes
 Your goal is to generate the necessary queries to complete the user's goal based on their instructions. Ensure the queries are concise, relevant, and avoid redundancy.
 
 Your output must only be a JSON object containing a single key "queries":
-{{ "queries": ["Query 1", "Query 2",...] }}
 
 # NOTE:
 * You can generate up to {max_queries} queries, but only as many as needed to effectively address the user's research goal.
@@ -83,7 +82,7 @@ PROVIDED INFORMATION:
 - Avoid redundancy, repetition, or unnecessary commentary
 """
 
-FINANCIAL_PROMPT = """Summarize the stock financial performance with listed key financial metric and predict its financial sentiment and stock price
+FINANCIAL_PROMPT = """Summarize the stock financial performance with listed key financial metric and predict its financial sentiment and stock price with the time period from user instruction.
 
 CONVERSATION HISTORY:
 {chat_history}

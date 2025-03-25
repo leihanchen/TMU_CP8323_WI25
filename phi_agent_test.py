@@ -24,23 +24,24 @@ class StockPrice(BaseModel):
         examples=["The financial performance of stock is ..."],
         desription="The summary of the company financial situation",
     )
-    # ticker: str = Field(..., examples=["NVDA", "AMD"], description="The stock ticker")
-    # price: float = Field(
-    #     ..., examples=[100.0, 200.0], description="The predicted stock price"
-    # )
-    # currency: str = Field(
-    #     ..., examples=["USD", "EUR"], description="The currency of the stock price"
-    # )
-    # sentiment: Literal["positive", "negative", "neutral"] = Field(
-    #     ..., description="The sentiment of the stock financial performance"
-    # )
-    # confidence_score: float = Field(
-    #     ...,
-    #     ge=-1,
-    #     le=1,
-    #     examples=[0.0, 1.0],
-    #     description="The confidence score of the stock financial performance",
-    # )
+    ticker: str = Field(..., examples=["NVDA", "AMD"], description="The stock ticker")
+    price: float = Field(
+        ..., examples=[100.0, 200.0], description="The predicted stock price"
+    )
+    currency: str = Field(
+        ..., examples=["USD", "EUR"], description="The currency of the stock price"
+    )
+    sentiment: Literal["positive", "negative", "neutral"] = Field(
+        ..., description="The sentiment of the stock financial performance"
+    )
+    confidence_score: float = Field(
+        ...,
+        ge=-1,
+        le=1,
+        examples=[0.0, 1.0],
+        description="The confidence score of the stock financial performance",
+    )
+    analysis: str = Field(..., description="The analysis of the stock prediction")
 
 
 # knowledge_base = TextKnowledgeBase(
@@ -95,7 +96,7 @@ web_agent = Agent(
 
 agent_team = Agent(
     # team=[local_knowledge_agent, web_agent, finance_agent],
-    team=[web_agent, finance_agent],
+    team=[finance_agent],
     mode="coordinate",
     send_team_context_to_members=True,
     model=Ollama(id=TOOL_MODEL_ID),
@@ -107,7 +108,8 @@ agent_team = Agent(
         # "First, search relevant info in vector database and provide a summary.",
         "First, finding relevant information in the web about company financial report online.",
         "Then, ask yfinancial tool to provide the latest news, analyst recommendations, stock price and other metric.",
-        "Finally, provide a summary of current stock financial performance with structure output.",
+        "Next, provide a summary of current stock financial performance with structure output.",
+        "Finally, please provide your prediction on the stock price and sentiment for the time that user indicates and list your analysis.",
     ],
     show_tool_calls=True,
     # structured_outputs=True,
@@ -119,6 +121,6 @@ agent_team = Agent(
 
 # agent_team.print_response("Summarize analyst recommendations and share the latest news for NVDA", stream=True)
 agent_team.print_response(
-    "Please provide a financial summary with listing financial metricfor AAPL performance in March 2025",
+    "Please provide a financial summary with listing financial metric for AAPL performance in March 2025 and predict its stock price in next 7 days",
     stream=True,
 )

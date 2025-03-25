@@ -43,7 +43,6 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     #     user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
     #     output_format=Queries
     # )
-
     return {"research_queries": result.queries}
 
 def initiate_query_research(state: ResearcherState):
@@ -92,7 +91,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
         return {"are_documents_relevant": False}
     query = state["query"]
     retrieved_documents = state["retrieved_documents"]
-    # print("Retrieved documents:", retrieved_documents)
+    print("Retrieved documents:", retrieved_documents)
     
     evaluation_prompt = RELEVANCE_EVALUATOR_PROMPT.format(
         query=query,
@@ -138,7 +137,7 @@ def web_research(state: QuerySearchState):
     print("--- Web research ---")
     output = tavily_search(state["query"])
     search_results = output["results"]
-    # print("Web search results:", search_results)
+    print("Web search results:", search_results)
     return {"web_search_results": search_results}
 
 def summarize_query_research(state: QuerySearchState):
