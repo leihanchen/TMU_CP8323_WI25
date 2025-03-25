@@ -15,14 +15,17 @@ from pyngrok import ngrok
 
 load_dotenv()
 
-def generate_response(user_input, enable_web_search, report_structure, max_search_queries, chat_history):
+DATA_PATH= "/home/leihan-chen/Downloads/cp8323_data"
+
+def generate_response(user_input, enable_web_search, report_structure, max_search_queries, chat_history, symbols=None):
     """
     Generate response using the researcher agent and stream steps
     """
     # Initialize state for the researcher
     initial_state = {
         "user_instructions": user_input,
-        "chat_history": chat_history
+        "chat_history": chat_history,
+        "symbol": symbols
     }
     
     # Langgraph researcher config
@@ -238,7 +241,8 @@ def main():
             enable_web_search, 
             report_structure,
             st.session_state.max_search_queries,
-            st.session_state.chat_history
+            st.session_state.chat_history,
+            "AMD"  # Hardcoded symbol for now
         )
 
         # Add assistant response to chat history

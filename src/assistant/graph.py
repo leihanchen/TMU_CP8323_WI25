@@ -12,6 +12,8 @@ from src.assistant.state import ResearcherState, ResearcherStateInput, Researche
 from src.assistant.prompts import RESEARCH_QUERY_WRITER_PROMPT, RELEVANCE_EVALUATOR_PROMPT, SUMMARIZER_PROMPT, REPORT_WRITER_PROMPT, FINANCIAL_PROMPT, get_structure_prompt
 from src.assistant.utils import format_documents_with_metadata, invoke_llm, invoke_ollama, parse_output, tavily_search, Evaluation, Queries, StockPrice, parse_stock_price, invoke_ollama_chat
 from langchain_core.messages import HumanMessage, AIMessage
+import yfinance as yf
+from phi.tools.yfinance import YFinanceTools
 
 # Number of query to process in parallel for each batch
 # Change depending on the performance of the system
@@ -43,17 +45,18 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     #     user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
     #     output_format=Queries
     # )
-    return {"research_queries": result.queries}
+    return {"research_queries": result.queries, "symbol": state["symbol"]}
 
 def initiate_query_research(state: ResearcherState):
     queries = state["research_queries"]
+    symbol = state["symbol"]
     current_position = state["current_position"]
     batch_end = min(current_position, len(queries))
     batch_start = max(0, batch_end - BATCH_SIZE)
     current_batch = queries[batch_start:batch_end]
     
     return [
-        Send("search_and_summarize_query", {"query": s})
+        Send("search_and_summarize_query", {"query": s, "symbol": symbol})
         for s in current_batch
     ]
 
@@ -91,7 +94,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
         return {"are_documents_relevant": False}
     query = state["query"]
     retrieved_documents = state["retrieved_documents"]
-    print("Retrieved documents:", retrieved_documents)
+    # print("Retrieved documents:", retrieved_documents)
     
     evaluation_prompt = RELEVANCE_EVALUATOR_PROMPT.format(
         query=query,
@@ -116,7 +119,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
 
     return {"are_documents_relevant": evaluation.is_relevant}
 
-def route_research(state: QuerySearchState, config: RunnableConfig) -> Literal["summarize_query_research", "web_research", "__end__"]:
+def route_research(state: QuerySearchState, config: RunnableConfig) -> Literal["summarize_query_research", "web_research", "yfinance_search", "__end__"]:
     """ Route the research based on the documents relevance and web search availability """
     enable_web_search = config["configurable"].get("enable_web_search", False)
     
@@ -124,8 +127,8 @@ def route_research(state: QuerySearchState, config: RunnableConfig) -> Literal["
         print("Documents are relevant and web search is enabled. Proceeding to web search.")
         return "web_research"
     elif state["are_documents_relevant"]:
-        print("Documents are relevant. Proceeding to summarize.")
-        return "summarize_query_research"
+        print("Documents are relevant. Proceeding to yfinance search.")
+        return "yfinance_search"
     elif enable_web_search:
         print("Documents are not relevant. Finding web search results.")
         return "web_research"
@@ -140,6 +143,27 @@ def web_research(state: QuerySearchState):
     print("Web search results:", search_results)
     return {"web_search_results": search_results}
 
+
+def yfinance_search(state: QuerySearchState):
+    print("--- YFinance search ---")
+    symbol = state["symbol"]
+    tool = YFinanceTools(
+        enable_all=True,
+    )
+    # extract symbol and date from query
+    stock_fundmental = tool.get_stock_fundamentals(symbol)
+    history_stock = tool.get_historical_stock_prices(symbol, period = "3mo")
+    analysis = tool.get_analyst_recommendations(symbol)
+    financial_ratio = tool.get_key_financial_ratios(symbol)
+    # news = tool.get_company_news(symbol)
+    technical_indicator = tool.get_technical_indicators(symbol, period = "3mo")
+
+    # concatentate the information with thest str output
+    finance_info = f"Stock Fundamentals:\n{stock_fundmental}\n\nHistorical Stock Prices:\n{history_stock}\n\nAnalyst Recommendations:\n{analysis}\n\nKey Financial Ratios:\n{financial_ratio}\n\nTechnical Indicators:\n{technical_indicator}"
+    print("YFinance information:", finance_info)
+    return {"yfinance_info": finance_info}
+
+
 def summarize_query_research(state: QuerySearchState):
     print("--- Summarizing query research ---")
     query = state["query"]
@@ -147,7 +171,7 @@ def summarize_query_research(state: QuerySearchState):
     
     # Add relevant documents if available
     if state["are_documents_relevant"] and state["retrieved_documents"]:
-        information.append(format_documents_with_metadata(state["retrieved_documents"]))
+        information.append("RAG Documents:\n" + format_documents_with_metadata(state["retrieved_documents"]))
     
     # Add web search results if available
     if state.get("web_search_results"):
@@ -155,11 +179,16 @@ def summarize_query_research(state: QuerySearchState):
             f"Source: {result['url']}\nContent: {result['content']}"
             for result in state["web_search_results"]
         ])
-        information.append(web_results)
+        information.append("Web Search Results:\n" + web_results)
+
+    # Add yfinance information if available
+    if state.get("yfinance_info"):
+        yfinance_info = "YFinance Data:\n" + str(state["yfinance_info"])
+        information.append(yfinance_info)
 
     # Combine all information
     combined_info = "\n\n---\n\n".join(information)
-    
+    print("Combined information:", combined_info)
     summary_prompt = SUMMARIZER_PROMPT.format(
         query=query,
         docmuents=combined_info
@@ -171,7 +200,7 @@ def summarize_query_research(state: QuerySearchState):
         user_prompt=f"Generate a summary for this query: {query}"
     )
     summary = parse_output(summary)["response"]
-    print("Summary of query search:", summary)
+    # print("Summary of query search:", summary)
     return {
         "query": query,  # Include query for tracking
         "search_summaries": [summary]
@@ -209,7 +238,6 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
     # )
 
     answer_prompt = FINANCIAL_PROMPT.format(
-        chat_history=chat_history_str,
         instruction=state["user_instructions"],
         information="\n\n---\n\n".join(state["search_summaries"])
     )
@@ -227,11 +255,15 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
     # answer = parsing_result["response"]
     return {"final_answer": parsing_result}
 
-def route_web_research(state: QuerySearchState) -> Literal["summarize_query_research", "__end__"]:
+def route_web_research(state: QuerySearchState) -> Literal["yfinance_search", "__end__"]:
     """Route after web research based on results"""
     if state.get("web_search_results"):
-        return "summarize_query_research"
+        return "yfinance_search"
     return "__end__"
+
+# def route_yfinance(state: QuerySearchState) -> Literal["summarize_query_research", "__end__"]:
+#     """Route after yfinance search"""
+#     return "summarize_query_research"
 
 # Create subghraph for searching each query
 query_search_subgraph = StateGraph(QuerySearchState, input=QuerySearchStateInput, output=QuerySearchStateOutput)
@@ -240,6 +272,7 @@ query_search_subgraph = StateGraph(QuerySearchState, input=QuerySearchStateInput
 query_search_subgraph.add_node(retrieve_rag_documents)
 query_search_subgraph.add_node(evaluate_retrieved_documents)
 query_search_subgraph.add_node(web_research)
+query_search_subgraph.add_node(yfinance_search)
 query_search_subgraph.add_node(summarize_query_research)
 
 # Set entry point and define transitions for the subgraph
@@ -251,14 +284,16 @@ query_search_subgraph.add_conditional_edges(
     {
         "summarize_query_research": "summarize_query_research",
         "web_research": "web_research",
+        "yfinance_search": "yfinance_search",
         "__end__": END,
     },
 )
 query_search_subgraph.add_conditional_edges(
     "web_research",
     route_web_research,
-    {"summarize_query_research": "summarize_query_research", "__end__": END},
+    {"yfinance_search": "yfinance_search", "__end__": END},
 )
+query_search_subgraph.add_edge("yfinance_search", "summarize_query_research")
 query_search_subgraph.add_edge("summarize_query_research", END)
 
 # Create main research agent graph
@@ -267,6 +302,8 @@ researcher_graph = StateGraph(ResearcherState, input=ResearcherStateInput, outpu
 # Define main researcher nodes
 researcher_graph.add_node(generate_research_queries)
 researcher_graph.add_node(search_queries)
+researcher_graph.add_node(initiate_query_research)
+researcher_graph.add_node(check_more_queries)
 researcher_graph.add_node("search_and_summarize_query", query_search_subgraph.compile())
 researcher_graph.add_node(generate_final_answer)
 

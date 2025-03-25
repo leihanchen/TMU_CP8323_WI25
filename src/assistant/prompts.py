@@ -84,9 +84,6 @@ PROVIDED INFORMATION:
 
 FINANCIAL_PROMPT = """Summarize the stock financial performance with listed key financial metric and predict its financial sentiment and stock price with the time period from user instruction.
 
-CONVERSATION HISTORY:
-{chat_history}
-
 USER INSTRUCTION:
 {instruction}
 
@@ -97,6 +94,14 @@ PROVIDED INFORMATION:
 - Focus ONLY on factual, objective information
 - Avoid redundancy, repetition, or unnecessary commentary
 - List financial relevant metrics and results in the summary
+- Your output must only be a JSON object containing a with the following keys:
+    - "stock_summary": summary of the stock financial performance
+    - "ticker": the symbol of the stock
+    - "price": stock predited price
+    - "currency": currency
+    - "sentiment": financial sentiment
+    - "confidence_score": confidence score of the sentiment
+    - "think": your reasoning trace how to answer the question 
 """
 
 def get_structure_prompt(structure_name):

@@ -51,6 +51,11 @@ def parse_output(text):
 def parse_stock_price(stockprice: StockPrice):
     return stockprice.model_dump()
 
+def extract_symbol_and_date(query):
+    symbol = re.search(r'\b[A-Z]{2,5}\b', query).group(0)
+    date = re.search(r'\d{4}-\d{2}-\d{2}', query).group(0)
+    return symbol, date
+
 def format_documents_with_metadata(documents):
     """
     Convert a list of Documents into a formatted string including metadata.

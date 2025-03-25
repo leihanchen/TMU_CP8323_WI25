@@ -10,10 +10,12 @@ class ResearcherState(TypedDict):
     current_position: int
     final_answer: str
     chat_history: List[BaseMessage]
+    symbol: str
 
 class ResearcherStateInput(TypedDict):
     user_instructions: str
     chat_history: List[BaseMessage]
+    symbol: str
 
 class ResearcherStateOutput(TypedDict):
     final_answer: str
@@ -24,9 +26,11 @@ class QuerySearchState(TypedDict):
     retrieved_documents: list
     are_documents_relevant: bool
     search_summaries: list[str]
+    symbol: str
 
 class QuerySearchStateInput(TypedDict):
     query: str
+    symbol: str
 
 class QuerySearchStateOutput(TypedDict):
     query: str
