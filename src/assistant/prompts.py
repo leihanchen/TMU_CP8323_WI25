@@ -55,7 +55,7 @@ Query:
 {query}
 
 Retrieved Documents:
-{docmuents}
+{documents}
 """
 
 

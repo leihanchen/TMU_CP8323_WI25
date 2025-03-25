@@ -40,12 +40,19 @@ class StockPrice(BaseModel):
 
 
 def parse_output(text):
-    think = re.search(r'<think>(.*?)</think>', text, re.DOTALL).group(1).strip()
-    output = re.search(r'</think>\s*(.*?)$', text, re.DOTALL).group(1).strip()
+    
+    if re.search(r'<think>(.*?)</think>', text, re.DOTALL) is not None:
+        think = re.search(r'<think>(.*?)</think>', text, re.DOTALL).group(1).strip()
+        output = re.search(r'</think>\s*(.*?)$', text, re.DOTALL).group(1).strip()
+
+        return {
+            "reasoning": think,
+            "response": output
+        }
 
     return {
-        "reasoning": think,
-        "response": output
+        "reasoning": "",
+        "response": text
     }
 
 def parse_stock_price(stockprice: StockPrice):

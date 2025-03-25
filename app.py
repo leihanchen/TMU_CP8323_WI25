@@ -12,8 +12,28 @@ from src.assistant.utils import get_report_structures, process_uploaded_files
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
 from pyngrok import ngrok
+import os
+import re
+import io
 
 load_dotenv()
+
+REPORTS_PATH = "C:\\Users\\tejas\\Downloads\\nlpa1\\parsed_per_file_only_keywords"
+
+def find_reports_for_ticker(ticker):
+    """
+    Searches for available reports for a given ticker.
+    Returns a dictionary of {Year_ReportType: file_path}
+    """
+    reports = {}
+    pattern = re.compile(f"^{ticker}_\d+_(10K|DEF14A|YFinance)\\_parsed.(txt|csv)$")
+
+    for file in os.listdir(REPORTS_PATH):
+        if pattern.match(file):
+            year, report_type = file.split("_")[1:3]
+            reports[f"{year} {report_type}"] = os.path.join(REPORTS_PATH, file)
+
+    return reports
 
 def generate_response(user_input, enable_web_search, report_structure, max_search_queries, chat_history):
     """
@@ -24,7 +44,7 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
         "user_instructions": user_input,
         "chat_history": chat_history
     }
-    
+
     # Langgraph researcher config
     config = {"configurable": {
         "enable_web_search": enable_web_search,
@@ -69,7 +89,6 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
                         st.write(value_response)
                     with final_thinking_expander:
                         st.write(value_reasoning)
-
 
                 steps.append({"step": key, "content": value})
 
@@ -149,7 +168,8 @@ def main():
         "Report Structure",
         options=list(report_structures.keys()),
         index=list(map(str.lower, report_structures.keys())).index(default_report),
-        help="Select the structure for the generated report."
+        help="Select the structure for the generated report.",
+        key="structure"
     )
 
     st.session_state.selected_report_structure = {
@@ -168,43 +188,84 @@ def main():
     
     enable_web_search = st.sidebar.checkbox("Enable Web Search", value=True)
 
-    # Upload file logic
-    uploaded_files = st.sidebar.file_uploader(
-        "Upload New Documents",
+    # Fetch tickers
+    tickers = fetch_ticker()
+    selected_ticker = st.sidebar.selectbox("Select Ticker", tickers, key="ticker")
+
+    # Fetch available reports for the selected ticker from the internal dataset
+    available_reports = find_reports_for_ticker(selected_ticker)
+
+    # Load internal files as simulated Streamlit uploads
+    internal_uploaded_files = []
+    for name, path in available_reports.items():
+        if os.path.isfile(path):
+            with open(path, "rb") as f:
+                content = f.read()
+            uploaded_file = io.BytesIO(content)
+            uploaded_file.name = os.path.basename(path)
+            internal_uploaded_files.append(uploaded_file)
+
+    # Combine with manually uploaded files
+    user_uploaded_files = st.sidebar.file_uploader(
+        "Upload Additional Documents",
         type=["pdf", "txt", "csv", "md", "json"],
         accept_multiple_files=True,
         key=f"uploader_{st.session_state.uploader_key}"
     )
 
-    # Check for new unprocessed files 
-    # Display the "Process Files" button and status
+    uploaded_files = (user_uploaded_files or []) + internal_uploaded_files
+
+    # Process uploaded files and integrate them with internal dataset reports
     if uploaded_files:
         process_button_placeholder = st.sidebar.empty()
         current_files = {f.name for f in uploaded_files}
         unprocessed_files = current_files - st.session_state.processed_files
-        # Show process button if there are unprocessed files
+
         if unprocessed_files:
             with process_button_placeholder.container():
-                process_clicked = st.button("Process Files", use_container_width=True)
+                process_clicked = st.button("Process Uploaded Files", use_container_width=True)
 
                 if process_clicked:
-                    with st.sidebar.status("Processing files...", expanded=False) as status:
+                    with st.sidebar.status("Processing uploaded files...", expanded=False) as status:
                         if process_uploaded_files(uploaded_files, unprocessed_files):
-                            # Add newly processed files to the set
                             st.session_state.processed_files.update(current_files)
                             st.session_state.file_status = status
-                            status.update(label=f"Processed {len(unprocessed_files)} new files successfully!", state="complete", expanded=False)
-        
-        # Show status for all processed files
-        if st.session_state.processed_files:
-            if st.session_state.file_status:
-                total_processed = len(st.session_state.processed_files)
-                st.session_state.file_status.update(
-                    label=f"Total files processed: {total_processed}", 
-                    state="complete", 
-                    expanded=False
-                )
+                            status.update(
+                                label=f"Processed {len(unprocessed_files)} new files successfully!",
+                                state="complete",
+                                expanded=False
+                            )
 
+    # Merge dataset reports & uploaded reports
+    all_reports = available_reports.copy()
+    for uploaded_file in uploaded_files or []:
+        all_reports[uploaded_file.name] = uploaded_file
+
+    # Display reports selection if any reports are available
+    if all_reports:
+        selected_report_key = st.sidebar.selectbox("Select Report", list(all_reports.keys()), key="sel_rep")
+        selected_report_path = all_reports[selected_report_key]
+
+        st.sidebar.write(f"Selected file: {selected_report_path}")
+
+        # Read and display file content based on type
+        if isinstance(selected_report_path, str):  # Internal dataset file
+            if selected_report_path.endswith(".csv"):
+                df = pd.read_csv(selected_report_path)
+                st.write(df.head())  # Show a preview
+            else:
+                with open(selected_report_path, "r", encoding="utf-8") as f:
+                    st.text_area("Report Content", f.read(), height=300)
+        else:  # Uploaded file (streamlit file object)
+            if selected_report_path.name.endswith(".csv"):
+                df = pd.read_csv(selected_report_path)
+                st.write(df.head())
+            else:
+                content = selected_report_path.getvalue().decode("utf-8")
+                st.text_area("Report Content", content, height=300)
+    else:
+        st.sidebar.write("No reports available for this ticker.")
+        
     # Connect ngrok only if not already connected
     if not st.session_state.ngrok_connected:
         ngrok.set_auth_token("2tXPwDst3Zu00YOYMDzYjCnQZ96_Sz2BVfU7jCHmg5bBmffc")
@@ -256,15 +317,7 @@ def main():
     
     if st.session_state.public_url is not None:
         st.sidebar.markdown(f"**Public URL:** {st.session_state.public_url}")
-    
-    # Fetch tickers for user to select
-    tickers = fetch_ticker()
-    selected_ticker = st.sidebar.selectbox("Select Ticker", tickers)
 
-
-
-    # Display the selected ticker
-    st.sidebar.write(f"You selected: {selected_ticker}")
 
 if __name__ == "__main__":
     main()
