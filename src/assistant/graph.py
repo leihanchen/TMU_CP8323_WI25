@@ -54,6 +54,7 @@ def retrieve_rag_documents(state: QuerySearchState):
     print("--- Retrieving documents ---")
     query = state["query"]
     vectorstore = get_or_create_vector_db()
+    print("Vectorstore - ",vectorstore)
     if vectorstore is None:
         return {"retrieved_documents": None}
     vectorstore_retreiver = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
@@ -67,7 +68,7 @@ def evaluate_retrieved_documents(state: QuerySearchState):
         return {"are_documents_relevant": False}
     query = state["query"]
     retrieved_documents = state["retrieved_documents"]
-    # print("Retrieved documents:", retrieved_documents)
+    print("Retrieved documents:", retrieved_documents)
     
     evaluation_prompt = RELEVANCE_EVALUATOR_PROMPT.format(
         query=query,
@@ -122,7 +123,7 @@ def summarize_query_research(state: QuerySearchState):
     print("--- Summarizing query research ---")
     query = state["query"]
     information = []
-    
+    print(state)
     # Add relevant documents if available
     if state["are_documents_relevant"] and state["retrieved_documents"]:
         information.append(format_documents_with_metadata(state["retrieved_documents"]))
@@ -140,7 +141,7 @@ def summarize_query_research(state: QuerySearchState):
     
     summary_prompt = SUMMARIZER_PROMPT.format(
         query=query,
-        docmuents=combined_info
+        documents=combined_info
     )
     
     summary = invoke_ollama(

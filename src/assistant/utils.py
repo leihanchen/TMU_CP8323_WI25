@@ -216,24 +216,11 @@ def process_uploaded_files(uploaded_files, unprocessed_files_str):
             elif file_extension == "pdf":
                 loader = PDFPlumberLoader(temp_file_path)
             elif file_extension == "json":
-                # Load JSON Lines format with jq schema to combine title and summary
                 loader = JSONLoader(
                     file_path=temp_file_path,
-                    jq_schema=".[]",  # Load each line as a separate document
-                    json_lines=True,
-                    # text_content=False,
-                    # metadata_func=lambda metadata: {
-                    #     "ticker": metadata.get("ticker", ""),
-                    #     "date": metadata.get("date", ""),
-                    #     "title": metadata.get("title", ""),
-                    #     "source": "financial_news",
-                    # },
-                    # content_func=lambda data: (
-                    #     f"Title: {data.get('title', '')}\n\n"
-                    #     f"Summary: {data.get('summary', '')}\n\n"
-                    #     f"Ticker: {data.get('ticker', '')}\n"
-                    #     f"Date: {data.get('date', '')}"
-                    # )
+                    jq_schema='.[] | {page_content: .text, metadata: {keywords: .keywords}}',
+                    text_content=False,
+                    json_lines=False
                 )
             else:
                 continue
