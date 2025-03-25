@@ -4,7 +4,7 @@ import shutil
 from ollama import chat, Client
 from tavily import TavilyClient
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, Optional
 from langchain_community.document_loaders import CSVLoader, TextLoader, PDFPlumberLoader, JSONLoader
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from src.assistant.vector_db import add_documents
@@ -36,7 +36,7 @@ class StockPrice(BaseModel):
     )
     sentiment: Literal["positive", "negative", "neutral"] = Field(description="The sentiment of the stock financial performance")
     confidence_score: float = Field(..., ge=-1.0, le=1.0, examples=[0.0, 1.0], description="The confidence score of the stock sentiment")
-    think: str = Field(description="The model's internal chain-of-thought reasoning trace")
+    think: Optional[str] = Field(description="Think though how to answer the question, non reasoning model should be empty")
 
 
 def parse_output(text):
