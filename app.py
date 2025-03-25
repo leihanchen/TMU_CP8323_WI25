@@ -195,39 +195,45 @@ def main():
     # Fetch available reports for the selected ticker from the internal dataset
     available_reports = find_reports_for_ticker(selected_ticker)
 
-    # Load internal files as simulated Streamlit uploads
-    internal_uploaded_files = []
-    for name, path in available_reports.items():
-        if os.path.isfile(path):
-            with open(path, "rb") as f:
-                content = f.read()
-            uploaded_file = io.BytesIO(content)
-            uploaded_file.name = os.path.basename(path)
-            internal_uploaded_files.append(uploaded_file)
-
-    # Combine with manually uploaded files
-    user_uploaded_files = st.sidebar.file_uploader(
+    # Allow users to upload additional files
+    uploaded_files = st.sidebar.file_uploader(
         "Upload Additional Documents",
         type=["pdf", "txt", "csv", "md", "json"],
         accept_multiple_files=True,
         key=f"uploader_{st.session_state.uploader_key}"
     )
 
-    uploaded_files = (user_uploaded_files or []) + internal_uploaded_files
+    # ✅ Auto-load ticker-based files as if uploaded
+    if "auto_uploaded_files" not in st.session_state:
+        auto_uploaded_files = []
+        for name, path in available_reports.items():
+            if os.path.isfile(path):
+                with open(path, "rb") as f:
+                    content = f.read()
+                fake_file = io.BytesIO(content)
+                fake_file.name = os.path.basename(path)
+                auto_uploaded_files.append(fake_file)
+
+        st.session_state.auto_uploaded_files = auto_uploaded_files
+        st.session_state.auto_trigger_upload = True  # used below to trigger processing
+
+    # ✅ Combine manually uploaded + auto-uploaded files
+    combined_uploaded_files = list(uploaded_files or []) + st.session_state.get("auto_uploaded_files", [])
 
     # Process uploaded files and integrate them with internal dataset reports
-    if uploaded_files:
+    if combined_uploaded_files:
         process_button_placeholder = st.sidebar.empty()
-        current_files = {f.name for f in uploaded_files}
+        current_files = {f.name for f in combined_uploaded_files}
         unprocessed_files = current_files - st.session_state.processed_files
 
         if unprocessed_files:
             with process_button_placeholder.container():
-                process_clicked = st.button("Process Uploaded Files", use_container_width=True)
+                # ✅ Auto-trigger upload if needed
+                process_clicked = st.button("Process Uploaded Files", use_container_width=True) or st.session_state.get("auto_trigger_upload", False)
 
                 if process_clicked:
                     with st.sidebar.status("Processing uploaded files...", expanded=False) as status:
-                        if process_uploaded_files(uploaded_files, unprocessed_files):
+                        if process_uploaded_files(combined_uploaded_files, unprocessed_files):
                             st.session_state.processed_files.update(current_files)
                             st.session_state.file_status = status
                             status.update(
@@ -235,10 +241,13 @@ def main():
                                 state="complete",
                                 expanded=False
                             )
+                    # ✅ Reset auto-trigger flag
+                    st.session_state.auto_trigger_upload = False
+
 
     # Merge dataset reports & uploaded reports
     all_reports = available_reports.copy()
-    for uploaded_file in uploaded_files or []:
+    for uploaded_file in combined_uploaded_files:
         all_reports[uploaded_file.name] = uploaded_file
 
     # Display reports selection if any reports are available

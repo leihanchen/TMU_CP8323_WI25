@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import json
 from ollama import chat, Client
 from tavily import TavilyClient
 from pydantic import BaseModel, Field
@@ -250,6 +251,7 @@ def process_uploaded_files(uploaded_files, unprocessed_files_str):
                 continue
             file_extension = uploaded_file.name.split(".")[-1].lower()
             temp_file_path = os.path.join(temp_folder, uploaded_file.name)
+            print("Processing ", uploaded_file.name)
 
             # Save file temporarily
             with open(temp_file_path, "wb") as f:
@@ -263,33 +265,36 @@ def process_uploaded_files(uploaded_files, unprocessed_files_str):
             elif file_extension == "pdf":
                 loader = PDFPlumberLoader(temp_file_path)
             elif file_extension == "json":
-                # Load JSON Lines format with jq schema to combine title and summary
+                # Check if file is empty before loading
+                with open(temp_file_path, "r", encoding="utf-8") as json_file:
+                    content = json_file.read().strip()
+                    if not content:
+                        print(f"Skipping empty JSON file: {uploaded_file.name}")
+                        continue
+                
+                with open(temp_file_path, "r", encoding="utf-8") as f:
+                    first_line = f.readline().strip()
+                # Heuristic: if it starts with "[" it's probably a JSON array
+                is_json_lines = not first_line.startswith("[")
+
                 loader = JSONLoader(
                     file_path=temp_file_path,
-                    jq_schema=".[]",  # Load each line as a separate document
-                    json_lines=True,
-                    # text_content=False,
-                    # metadata_func=lambda metadata: {
-                    #     "ticker": metadata.get("ticker", ""),
-                    #     "date": metadata.get("date", ""),
-                    #     "title": metadata.get("title", ""),
-                    #     "source": "financial_news",
-                    # },
-                    # content_func=lambda data: (
-                    #     f"Title: {data.get('title', '')}\n\n"
-                    #     f"Summary: {data.get('summary', '')}\n\n"
-                    #     f"Ticker: {data.get('ticker', '')}\n"
-                    #     f"Date: {data.get('date', '')}"
-                    # )
+                    jq_schema=".[]",
+                    json_lines=is_json_lines,
+                    text_content=False,
                 )
             else:
                 continue
 
-            # Load and append documents
-            docs = loader.load()
-            add_documents(docs)
+            # Try loading documents safely
+            try:
+                docs = loader.load()
+                print(f"Processed file {uploaded_file.name}")
+                add_documents(docs)
+            except Exception as e:
+                print(f"Error processing file {uploaded_file.name}: {e}")
+                continue
 
         return True
     finally:
-        # Remove the temp folder and its contents
         shutil.rmtree(temp_folder, ignore_errors=True)
