@@ -1,6 +1,6 @@
 from phi.agent import Agent, RunResponse
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Literal
 from phi.model.ollama import Ollama
 from phi.tools.yfinance import YFinanceTools
 from phi.tools.tavily import TavilyTools
@@ -14,22 +14,33 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-MODEL_ID = "deepseek-r1:7b"
+REASONING_MODEL_ID = "deepseek-r1:7b"
+TOOL_MODEL_ID = "llama3.2"
 
 
 class StockPrice(BaseModel):
-    summary: str = Field(
+    finance_summary: str = Field(
         ...,
-        examples=["The reason of my prediction bases on ..."],
-        desription="The summary of the prediction process",
+        examples=["The financial performance of stock is ..."],
+        desription="The summary of the company financial situation",
     )
-    ticker: str = Field(..., examples=["NVDA", "AMD"], description="The stock ticker")
-    price: float = Field(
-        ..., examples=[100.0, 200.0], description="The predicted stock price"
-    )
-    currency: str = Field(
-        ..., examples=["USD", "EUR"], description="The currency of the stock price"
-    )
+    # ticker: str = Field(..., examples=["NVDA", "AMD"], description="The stock ticker")
+    # price: float = Field(
+    #     ..., examples=[100.0, 200.0], description="The predicted stock price"
+    # )
+    # currency: str = Field(
+    #     ..., examples=["USD", "EUR"], description="The currency of the stock price"
+    # )
+    # sentiment: Literal["positive", "negative", "neutral"] = Field(
+    #     ..., description="The sentiment of the stock financial performance"
+    # )
+    # confidence_score: float = Field(
+    #     ...,
+    #     ge=-1,
+    #     le=1,
+    #     examples=[0.0, 1.0],
+    #     description="The confidence score of the stock financial performance",
+    # )
 
 
 # knowledge_base = TextKnowledgeBase(
@@ -55,16 +66,18 @@ class StockPrice(BaseModel):
 finance_agent = Agent(
     name="Finance Agent",
     role="Analyze financial data",
-    model=Ollama(id=MODEL_ID),
+    model=Ollama(id=TOOL_MODEL_ID),
     tools=[
         YFinanceTools(
             stock_price=True,
             analyst_recommendations=True,
             company_info=True,
             company_news=True,
+            stock_fundamentals=True,
         )
     ],
     instructions=["Use tables to display data"],
+    description="You are an investment analyst that researches stock prices, analyst recommendations, and stock fundamentals",
     show_tool_calls=True,
     markdown=True,
 )
@@ -73,7 +86,7 @@ finance_agent = Agent(
 web_agent = Agent(
     name="Web Agent",
     role="Search the web for information",
-    model=Ollama(id=MODEL_ID),
+    model=Ollama(id=TOOL_MODEL_ID),
     tools=[TavilyTools()],
     instructions=["Always include sources"],
     show_tool_calls=True,
@@ -83,22 +96,29 @@ web_agent = Agent(
 agent_team = Agent(
     # team=[local_knowledge_agent, web_agent, finance_agent],
     team=[web_agent, finance_agent],
-    model=Ollama(id=MODEL_ID),
+    mode="coordinate",
+    send_team_context_to_members=True,
+    model=Ollama(id=TOOL_MODEL_ID),
+    reasoning_model=Ollama(id=REASONING_MODEL_ID),
+    reasoning=True,
+    show_full_reasoning=True,
+    show_members_responses=True,
     instructions=[
         # "First, search relevant info in vector database and provide a summary.",
-        # "Then, using summary to keep finding relevant information in the web.",
-        "Then, ask yfinancial tool to provide the latest news and analyst recommendations.",
-        "Finally, provide a summary and prediction with structure output.",
+        "First, finding relevant information in the web about company financial report online.",
+        "Then, ask yfinancial tool to provide the latest news, analyst recommendations, stock price and other metric.",
+        "Finally, provide a summary of current stock financial performance with structure output.",
     ],
     show_tool_calls=True,
-    structured_outputs=True,
+    # structured_outputs=True,
+    # output_model=StockPrice,
     markdown=True,
     debug_mode=True,
-    output_model=StockPrice,
+    stream=True,
 )
 
 # agent_team.print_response("Summarize analyst recommendations and share the latest news for NVDA", stream=True)
 agent_team.print_response(
-    "Please provide a prediction for AMD stock price in April 2025",
+    "Please provide a financial summary with listing financial metricfor AAPL performance in March 2025",
     stream=True,
 )
