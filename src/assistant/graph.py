@@ -163,7 +163,7 @@ def summarize_query_research(state: QuerySearchState):
     
     summary_prompt = SUMMARIZER_PROMPT.format(
         query=query,
-        docmuents=combined_info
+        documents=combined_info
     )
     
     summary = invoke_ollama(
