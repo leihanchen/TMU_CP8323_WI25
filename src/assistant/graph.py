@@ -10,7 +10,7 @@ from src.assistant.configuration import Configuration
 from src.assistant.vector_db import get_or_create_vector_db
 from src.assistant.state import ResearcherState, ResearcherStateInput, ResearcherStateOutput, QuerySearchState, QuerySearchStateInput, QuerySearchStateOutput
 from src.assistant.prompts import RESEARCH_QUERY_WRITER_PROMPT, RELEVANCE_EVALUATOR_PROMPT, SUMMARIZER_PROMPT, REPORT_WRITER_PROMPT, FINANCIAL_PROMPT, get_structure_prompt
-from src.assistant.utils import format_documents_with_metadata, invoke_llm, invoke_ollama, parse_output, tavily_search, Evaluation, Queries, StockPrice, parse_stock_price
+from src.assistant.utils import format_documents_with_metadata, invoke_llm, invoke_ollama, parse_output, tavily_search, Evaluation, Queries, StockPrice, parse_stock_price, invoke_ollama_chat
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Number of query to process in parallel for each batch
@@ -219,7 +219,7 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
     result = invoke_ollama(
         model=MODEL_ID,
         system_prompt=answer_prompt,
-        user_prompt=f"Generate a prediction using the provided information and chat history with certain format",
+        user_prompt=f"Generate a summary of the company financial situation and a prediction using the provided information and chat history with user instructions: {state['user_instructions']}",
         output_format=StockPrice
     )
     # Remove thinking part (reasoning between <think> tags)

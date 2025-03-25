@@ -6,6 +6,7 @@ from tavily import TavilyClient
 from pydantic import BaseModel, Field
 from typing import Literal
 from langchain_community.document_loaders import CSVLoader, TextLoader, PDFPlumberLoader, JSONLoader
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from src.assistant.vector_db import add_documents
 
 class Evaluation(BaseModel):
@@ -34,8 +35,8 @@ class StockPrice(BaseModel):
         ..., examples=["USD", "EUR"], description="The currency of the stock price"
     )
     sentiment: Literal["positive", "negative", "neutral"] = Field(description="The sentiment of the stock financial performance")
-    confidence_score: float = Field(description="The confidence score of the stock financial performance")
-    think: str = Field(description="The model's internal chain-of-thought reasoning")
+    confidence_score: float = Field(..., ge=-1.0, le=1.0, examples=[0.0, 1.0], description="The confidence score of the stock sentiment")
+    think: str = Field(description="The model's internal chain-of-thought reasoning trace")
 
 
 def parse_output(text):
@@ -102,6 +103,22 @@ def invoke_ollama(model, system_prompt, user_prompt, output_format=None):
             return output_format.model_validate_json(response.message.content)
         else:
             return response.message.content
+
+def invoke_ollama_chat(model, system_prompt, user_prompt, temperature=0, output_format=None):
+    ollama_model = ChatOllama(model=model, temperature=temperature)
+    if output_format is not None:
+        ollama_model = ollama_model.with_structured_output(output_format, method="json_schema")
+    # Invoke LLM
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+    response = ollama_model.invoke(messages)
+    if output_format is not None:
+        return response
+    else:
+        return response.content
+
 
 def invoke_vllm(model, system_prompt, user_prompt, output_format=None):
     from openai import OpenAI

@@ -83,7 +83,7 @@ PROVIDED INFORMATION:
 - Avoid redundancy, repetition, or unnecessary commentary
 """
 
-FINANCIAL_PROMPT = """Summarize the stock financial performance and predict its financial sentiment and stock price
+FINANCIAL_PROMPT = """Summarize the stock financial performance with listed key financial metric and predict its financial sentiment and stock price
 
 CONVERSATION HISTORY:
 {chat_history}
