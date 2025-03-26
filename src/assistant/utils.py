@@ -266,19 +266,6 @@ def process_uploaded_files(uploaded_files, unprocessed_files_str):
                     file_path=temp_file_path,
                     jq_schema=".[]",  # Load each line as a separate document
                     json_lines=True,
-                    # text_content=False,
-                    # metadata_func=lambda metadata: {
-                    #     "ticker": metadata.get("ticker", ""),
-                    #     "date": metadata.get("date", ""),
-                    #     "title": metadata.get("title", ""),
-                    #     "source": "financial_news",
-                    # },
-                    # content_func=lambda data: (
-                    #     f"Title: {data.get('title', '')}\n\n"
-                    #     f"Summary: {data.get('summary', '')}\n\n"
-                    #     f"Ticker: {data.get('ticker', '')}\n"
-                    #     f"Date: {data.get('date', '')}"
-                    # )
                 )
             else:
                 continue
@@ -287,6 +274,44 @@ def process_uploaded_files(uploaded_files, unprocessed_files_str):
             docs = loader.load()
             add_documents(docs)
 
+        return True
+    finally:
+        # Remove the temp folder and its contents
+        shutil.rmtree(temp_folder, ignore_errors=True)
+
+def process_found_files(unprocessed_files_str):
+    temp_folder = "temp_files"
+    if not os.path.exists(temp_folder):
+        os.makedirs(temp_folder, exist_ok=True)
+
+    try:
+        for uploaded_file in unprocessed_files_str:
+            file_extension = uploaded_file.split(".")[-1].lower()
+            file_name = os.path.basename(uploaded_file)
+            temp_file_path = os.path.join(temp_folder, file_name)
+
+            # Copy file in the temp_file_path
+            shutil.copy(uploaded_file, temp_file_path)
+            
+            # Choose the appropriate loader
+            if file_extension == "csv":
+                loader = CSVLoader(temp_file_path)
+            elif file_extension in ["txt", "md"]:
+                loader = TextLoader(temp_file_path)
+            elif file_extension == "pdf":
+                loader = PDFPlumberLoader(temp_file_path)
+            elif file_extension == "json":
+                # Load JSON Lines format with jq schema to combine title and summary
+                loader = JSONLoader(
+                    file_path=temp_file_path,
+                    jq_schema=".[].text",
+                )
+            else:
+                continue
+
+            # Load and append documents
+            docs = loader.load()
+            add_documents(docs)
         return True
     finally:
         # Remove the temp folder and its contents
