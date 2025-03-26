@@ -12,7 +12,8 @@ from src.assistant.graph import researcher
 from src.assistant.utils import get_report_structures, process_uploaded_files, process_found_files
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
-from pyngrok import ngrok
+from typing import Literal
+
 
 load_dotenv()
 
@@ -111,12 +112,26 @@ def clear_chat():
     st.session_state.chat_history = []
     st.session_state.processed_files = set()  # Clear processed files set
 
-def fetch_ticker():
+def fetch_ticker(type: Literal["sp500", "sp100"] = "sp100"):
     # URL of the Wikipedia page containing S&P 500 companies
-    url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
+    if type == "sp100":
+        url = 'https://en.wikipedia.org/wiki/S%26P_100'
+    elif type == "sp500":
+        url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
+    else:
+        raise ValueError("Invalid type. Use 'sp100' or 'sp500'")
+    
     tables = pd.read_html(url)
-    sp500_table = tables[0]
-    tickers = sp500_table['Symbol'].tolist()
+
+    if type == "sp100":
+        sp_table = tables[2]
+    elif type == "sp500":
+        sp_table = tables[0]
+    else:
+        raise ValueError("Invalid type. Use 'sp100' or 'sp500'")
+    
+    tickers = sp_table['Symbol'].tolist()
+    print("tickers: ", tickers)
     return tickers
 
 def main():
@@ -137,11 +152,8 @@ def main():
         st.session_state.processed_files = set()  # Track processed files
     if "selected_ticker" not in st.session_state:
         st.session_state.selected_ticker = None
-
-    # Initialize ngrok connection flag
-    if "ngrok_connected" not in st.session_state:
-        st.session_state.ngrok_connected = False
-        st.session_state.public_url = None
+    if "public_url" not in st.session_state:
+        st.session_state.public_url = "https://403c-141-117-231-104.ngrok-free.app"
 
     # Title row with clear button
     col1, col2 = st.columns([6, 1])
@@ -209,10 +221,7 @@ def main():
             st.sidebar.warning(f"No reports found for {selected_ticker}")
 
     # Connect ngrok only if not already connected
-    if not st.session_state.ngrok_connected:
-        ngrok.set_auth_token("2tXPwDst3Zu00YOYMDzYjCnQZ96_Sz2BVfU7jCHmg5bBmffc")
-        st.session_state.public_url = "https://403c-141-117-231-104.ngrok-free.app"
-        st.session_state.ngrok_connected = True
+    st.session_state.public_url = "https://403c-141-117-231-104.ngrok-free.app"
 
     # Display chat messages
     for idx, message in enumerate(st.session_state.messages):

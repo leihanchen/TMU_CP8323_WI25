@@ -1,12 +1,10 @@
 import csv
 import datetime
-import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from app import generate_response, fetch_ticker
-from langchain_core.messages import HumanMessage
 import argparse
 
 """
@@ -88,7 +86,7 @@ def automation(companies: list[str], rag_file_folder: str, past_months: int = 3)
                 enable_web_search=True,
                 report_structure="",
                 max_search_queries=3,
-                chat_history=chat_history
+                chat_history=chat_history,
                 rag_file_folder=rag_file_folder,
                 symbols=company,
             )
@@ -152,11 +150,11 @@ if __name__ == "__main__":
     fetch_type = args.fetch_type
     tickers = fetch_ticker(fetch_type)
 
-    past_6_months_data = automation(tickers, rag_file_folder, past_months=3)
+    past_months_data = automation(tickers, rag_file_folder, past_months=3)
     with open('stock_prices.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(["Ticker", "Year", "Month", "Price"])
-        for row in past_6_months_data:
+        for row in past_months_data:
             writer.writerow(row)
 
     # argparser = argparse.ArgumentParser()
