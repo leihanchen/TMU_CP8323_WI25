@@ -179,11 +179,9 @@ def yfinance_search(state: QuerySearchState):
     # extract symbol and date from query
     datetime = extract_most_recent_date(query)
     stock_fundmental = tool.get_stock_fundamentals(symbol)
-    print("datetime", datetime)
     history_stock = tool.get_historical_stock_prices(
         symbol, period="3mo", datetime=datetime
     )
-    print("History stock", history_stock)
     analysis = tool.get_analyst_recommendations(symbol)
     financial_ratio = tool.get_key_financial_ratios(symbol)
     # news = tool.get_company_news(symbol)
@@ -219,7 +217,6 @@ def summarize_query_research(state: QuerySearchState):
 
     # Combine all information
     combined_info = "\n\n---\n\n".join(information)
-    print("Combined information:", combined_info)
     summary_prompt = SUMMARIZER_PROMPT.format(
         query=query,
         docmuents=combined_info

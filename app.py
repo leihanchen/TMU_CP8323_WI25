@@ -18,7 +18,7 @@ load_dotenv()
 
 DATA_PATH = "/home/leihan-chen/Downloads/cp8323_data/individual_symbol"
 
-def find_reports_for_ticker(ticker):
+def find_reports_for_ticker(ticker, rag_file_folder):
     """
     Searches for available reports for a given ticker.
     Returns a dictionary of {Year_ReportType: file_path}
@@ -26,7 +26,7 @@ def find_reports_for_ticker(ticker):
     reports = {}
     pattern = re.compile(f"^{ticker}_\\d+_(10K|DEF14A|YFinance|News|Stock)\\_parsed.(json|csv)$")
 
-    for file in os.listdir(DATA_PATH):
+    for file in os.listdir(rag_file_folder):
         if pattern.match(file):
             year, report_type = file.split("_")[1:3]
             reports[f"{year} {report_type}"] = os.path.join(DATA_PATH, file)
@@ -34,10 +34,19 @@ def find_reports_for_ticker(ticker):
     return reports
 
 
-def generate_response(user_input, enable_web_search, report_structure, max_search_queries, chat_history, symbols=None):
+def generate_response(user_input, enable_web_search, report_structure, max_search_queries, chat_history, rag_file_folder, symbols=None):
     """
     Generate response using the researcher agent and stream steps
     """
+    # Update local rag vector database
+    ticker_reports = find_reports_for_ticker(symbols, rag_file_folder=rag_file_folder)
+
+    if len(ticker_reports):
+        if(process_found_files(ticker_reports.values())):
+            print(f"Processed {len(ticker_reports)} new files successfully!")
+    else:
+        print(f"No reports found for {symbols}")
+    
     # Initialize state for the researcher
     initial_state = {
         "user_instructions": user_input,
@@ -128,8 +137,6 @@ def main():
         st.session_state.processed_files = set()  # Track processed files
     if "selected_ticker" not in st.session_state:
         st.session_state.selected_ticker = None
-    if "process_clicked" not in st.session_state:
-        st.session_state.process_clicked = False
 
     # Initialize ngrok connection flag
     if "ngrok_connected" not in st.session_state:
@@ -178,8 +185,6 @@ def main():
     # Fetch tickers and add ticker selector
     tickers = fetch_ticker()
     selected_ticker = st.sidebar.selectbox("Select Ticker", tickers)
-
-    print("st Selected ticker: ", st.session_state.selected_ticker, " process clicked: ", st.session_state.process_clicked)
     # Update selected ticker in session state
     if True:
         st.session_state.selected_ticker = selected_ticker
@@ -192,31 +197,14 @@ def main():
             for report_name, _ in ticker_reports.items():
                 st.sidebar.text(f"📄 {report_name}")
 
-            print("create process button")
-            # Create process button
-            process_button = st.sidebar.button(
-                "Process Files",
-                help="Process new files for the selected ticker",
-                use_container_width=True,
-                key="process_button",
-            )
-            print("process button ", process_button)
-            if process_button:
-                print("Process button clicked")
-                st.session_state.process_clicked = True
-
-            # Handle processing when button is clicked
-            if st.session_state.process_clicked:
-                new_files = set(ticker_reports.values()) - st.session_state.processed_files
-                if new_files:
-                    with st.sidebar.status("Processing new files...", expanded=False) as status:
-                        if process_found_files(new_files):
-                            st.session_state.processed_files.update(new_files)
-                            status.update(label=f"Processed {len(new_files)} new files successfully!", state="complete")
-                else:
-                    st.sidebar.warning("No new files to process")
-                # Reset the button state after processing
-                st.session_state.process_clicked = False
+            new_files = set(ticker_reports.values()) - st.session_state.processed_files
+            if new_files:
+                with st.sidebar.status("Processing new files...", expanded=False) as status:
+                    if process_found_files(new_files):
+                        st.session_state.processed_files.update(new_files)
+                        status.update(label=f"Processed {len(new_files)} new files successfully!", state="complete")
+            else:
+                st.sidebar.warning("No new files to process")
         else:
             st.sidebar.warning(f"No reports found for {selected_ticker}")
 
@@ -245,13 +233,15 @@ def main():
 
         # Generate and display assistant response
         report_structure = st.session_state.selected_report_structure["content"]
+        rag_file_folder = DATA_PATH
         assistant_response = generate_response(
             user_input, 
             enable_web_search, 
             report_structure,
             st.session_state.max_search_queries,
             st.session_state.chat_history,
-            st.session_state.selected_ticker
+            rag_file_folder,
+            st.session_state.selected_ticker,
         )
 
         # Add assistant response to chat history
