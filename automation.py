@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from app import generate_response, fetch_ticker
 import argparse
 
@@ -139,6 +140,37 @@ def compare_stock_predictions(predicted_csv, actual_csv):
     plt.legend()
     plt.show()
 
+def compare_sentiment_predictions(predicted_csv, actual_csv):
+    # Load data from both CSV files
+    df_predicted = pd.read_csv(predicted_csv)
+    df_actual = pd.read_csv(actual_csv)
+
+    # Merge the two dataframes
+    df_merged = pd.merge(
+        df_predicted,
+        df_actual,
+        on=['Ticker', 'Year', 'Month'],
+        suffixes=('_pred', '_actual')
+    )
+
+    # Extract predicted and actual sentiment
+    y_pred = df_merged['PredictedSentiment']
+    y_true = df_merged['ActualSentiment']
+
+    # Calculate metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, average='weighted', zero_division=0)
+    recall = recall_score(y_true, y_pred, average='weighted', zero_division=0)
+    f1 = f1_score(y_true, y_pred, average='weighted', zero_division=0)
+    confusion = confusion_matrix(y_true, y_pred)
+
+    # Visualization
+    print("Accuracy:", accuracy)
+    print("Precision:", precision)
+    print("Recall:", recall)
+    print("F1-Score:", f1)
+    print("Confusion Matrix:")
+    print(confusion)
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
@@ -153,7 +185,7 @@ if __name__ == "__main__":
     past_months_data = automation(tickers, rag_file_folder, past_months=3)
     with open('stock_prices.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["Ticker", "Year", "Month", "Price"])
+        writer.writerow(["Ticker", "Year", "Month", "Price", "Sentiment", "ConfidenceScore"])
         for row in past_months_data:
             writer.writerow(row)
 
