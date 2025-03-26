@@ -71,7 +71,7 @@ if __name__ == "__main__":
             writer.writerow(row)
 """
 
-def automate_past_six_months(companies):
+def automate_past_three_months(companies):
     results = []
     today = datetime.date.today()
     for company in companies:
@@ -79,7 +79,7 @@ def automate_past_six_months(companies):
             date_point = today - relativedelta(months=i+1)
             year = date_point.year
             month = date_point.month
-            prompt = f"Please get the stock price for {company} from sp500 during {month}/{year}."
+            prompt = f"Please get the stock price, sentiment, and confidence score for {company} from sp500 during {month}/{year}."
             chat_history = [HumanMessage(content=prompt)]
             response = generate_response(
                 user_input=prompt,
@@ -89,13 +89,15 @@ def automate_past_six_months(companies):
                 chat_history=chat_history
             )
             price = response.get("final_answer", {}).get("price", "N/A")
-            results.append([company, year, month, price])
+            sentiment = response.get("final_answer", {}).get("sentiment", "N/A")
+            confidence_score = response.get("final_answer", {}).get("confidence_score", "N/A")
+            results.append([company, year, month, price, sentiment, confidence_score])
     return results
 
 
 if __name__ == "__main__":
-    tickers = fetch_ticker()[:10]
-    past_6_months_data = automate_past_six_months(tickers)
+    tickers = fetch_ticker()[:100]
+    past_6_months_data = automate_past_three_months(tickers)
     with open('stock_prices.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(["Ticker", "Year", "Month", "Price"])
