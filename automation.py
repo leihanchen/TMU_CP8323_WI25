@@ -1,5 +1,7 @@
 import csv
+import datetime
 import streamlit as st
+from dateutil.relativedelta import relativedelta
 from app import generate_response, fetch_ticker
 from langchain_core.messages import HumanMessage
 
@@ -34,6 +36,7 @@ if __name__ == "__main__":
         print(item)
 """
 
+"""
 def automate_predictions(companies):
     results = []
     for company in companies:
@@ -62,4 +65,35 @@ if __name__ == "__main__":
         writer = csv.writer(csvfile)
         writer.writerow(["Ticker", "Year", "Month", "PredictedPrice"])
         for row in prediction_results:
+            writer.writerow(row)
+"""
+
+def automate_past_six_months(companies):
+    results = []
+    today = datetime.date.today()
+    for company in companies:
+        for i in range(6):
+            date_point = today - relativedelta(months=i+1)
+            year = date_point.year
+            month = date_point.month
+            prompt = f"Please get the stock price for {company} from sp500 during {month}/{year}."
+            chat_history = [HumanMessage(content=prompt)]
+            response = generate_response(
+                user_input=prompt,
+                enable_web_search=True,
+                report_structure="",
+                max_search_queries=3,
+                chat_history=chat_history
+            )
+            price = response.get("final_answer", {}).get("price", "N/A")
+            results.append([company, year, month, price])
+    return results
+
+if __name__ == "__main__":
+    tickers = fetch_ticker()[:10]
+    past_6_months_data = automate_past_six_months(tickers)
+    with open('stock_prices.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["Ticker", "Year", "Month", "Price"])
+        for row in past_6_months_data:
             writer.writerow(row)
