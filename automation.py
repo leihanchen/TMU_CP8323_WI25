@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from app import generate_response, fetch_ticker
+from app import fetch_ticker, generate_experiment_response
 import argparse
 
 """
@@ -81,13 +81,10 @@ def automation(companies: list[str], rag_file_folder: str, past_months: int = 3)
             year = date_point.year
             month = date_point.month
             prompt = f"Please predict {company} stock price, financial sentiment with its confidence score for the average stock price in first seven days of{month}/{year}."
-            chat_history = ""
-            response = generate_response(
+            response = generate_experiment_response(
                 user_input=prompt,
                 enable_web_search=True,
-                report_structure="",
                 max_search_queries=3,
-                chat_history=chat_history,
                 rag_file_folder=rag_file_folder,
                 symbols=company,
             )

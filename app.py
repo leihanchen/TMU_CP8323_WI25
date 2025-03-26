@@ -106,6 +106,43 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
     # Return the final report
     return steps[-1]["content"] if steps else "No response generated"
 
+
+def generate_experiment_response(user_input, enable_web_search, max_search_queries, rag_file_folder, symbols=None):
+    """
+    Generate response using the researcher agent only
+    """
+    # Update local rag vector database
+    ticker_reports = find_reports_for_ticker(symbols, rag_file_folder=rag_file_folder)
+    
+    if len(ticker_reports):
+        if(process_found_files(ticker_reports.values())):
+            print(f"Processed {len(ticker_reports)} new files successfully!")
+    else:
+        print(f"No reports found for {symbols}")
+    
+    # Initialize state for the researcher
+    initial_state = {
+        "user_instructions": user_input,
+        "chat_history": "",
+        "symbol": symbols
+    }
+    
+    # Langgraph researcher config
+    config = {"configurable": {
+        "enable_web_search": enable_web_search,
+        "report_structure": "",
+        "max_search_queries": max_search_queries,
+    }}
+
+    steps = []
+    # Run the researcher graph and stream outputs
+    for output in researcher.stream(initial_state, config=config):
+        for key, value in output.items():
+            steps.append({"step": key, "content": value})
+
+    # Return the final report
+    return steps[-1]["content"] if steps else "No response generated"
+
 def clear_chat():
     st.session_state.messages = []
     st.session_state.processing_complete = False
