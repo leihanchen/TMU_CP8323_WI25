@@ -107,18 +107,25 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
     return steps[-1]["content"] if steps else "No response generated"
 
 
-def generate_experiment_response(user_input, enable_web_search, max_search_queries, rag_file_folder, symbols=None):
+def generate_experiment_response(user_input, enable_web_search, max_search_queries, rag_file_folder, processed_files, symbols=None):
     """
     Generate response using the researcher agent only
     """
     # Update local rag vector database
     ticker_reports = find_reports_for_ticker(symbols, rag_file_folder=rag_file_folder)
+    unprocessed_files = []
+    for value in ticker_reports.values():
+        if os.path.basename(value) not in processed_files:
+            processed_files.add(os.path.basename(value))
+            unprocessed_files.append(value)
     
-    if len(ticker_reports):
-        if(process_found_files(ticker_reports.values())):
-            print(f"Processed {len(ticker_reports)} new files successfully!")
-    else:
+    if len(unprocessed_files):
+        if(process_found_files(unprocessed_files)):
+            print(f"Processed {len(ticker_reports)} new files successfully with symbol {symbols}!")
+    elif len(ticker_reports):
         print(f"No reports found for {symbols}")
+    else:
+        print(f"Relevant files are processed for {symbols}")
     
     # Initialize state for the researcher
     initial_state = {

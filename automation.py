@@ -75,17 +75,19 @@ if __name__ == "__main__":
 def automation(companies: list[str], rag_file_folder: str, past_months: int = 3):
     results = []
     today = datetime.date.today()
+    processed_files = set()
     for company in companies:
         for i in range(past_months):
             date_point = today - relativedelta(months=i+1)
             year = date_point.year
             month = date_point.month
-            prompt = f"Please predict {company} stock price, financial sentiment with its confidence score for the average stock price in first seven days of{month}/{year}."
+            prompt = f"Please predict {company} stock price, financial sentiment with its confidence score (between -1(negative) and 1(positive)) for the 7-day average stock price of {month}/{year}."
             response = generate_experiment_response(
                 user_input=prompt,
                 enable_web_search=True,
                 max_search_queries=3,
                 rag_file_folder=rag_file_folder,
+                processed_files=processed_files,
                 symbols=company,
             )
             price = response.get("final_answer", {}).get("price", "N/A")
