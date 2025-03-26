@@ -5,6 +5,7 @@ from ollama import chat, Client
 from tavily import TavilyClient
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
+from dateparser.search import search_dates
 from langchain_community.document_loaders import CSVLoader, TextLoader, PDFPlumberLoader, JSONLoader
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from src.assistant.vector_db import add_documents
@@ -38,6 +39,20 @@ class StockPrice(BaseModel):
     confidence_score: float = Field(..., ge=-1.0, le=1.0, examples=[0.0, 1.0], description="The confidence score of the stock sentiment")
     think: Optional[str] = Field(description="Think though how to answer the question, non reasoning model should be empty")
 
+def extract_most_recent_date(text: str) -> str:
+    """
+    Extracts the most recent date from a text sentence.
+    Returns the date as a string in 'YYYY-MM-DD' format.
+    If no date is found, returns None.
+    """
+    results = search_dates(text)
+    if not results:
+        return None
+    
+    # Extract the dates and choose the maximum
+    dates = [dt for _, dt in results]
+    most_recent = max(dates)
+    return most_recent.strftime("%Y-%m-%d")
 
 def parse_output(text):
     think = re.search(r'<think>(.*?)</think>', text, re.DOTALL).group(1).strip()

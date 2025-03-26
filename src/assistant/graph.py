@@ -8,12 +8,37 @@ from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from src.assistant.configuration import Configuration
 from src.assistant.vector_db import get_or_create_vector_db
-from src.assistant.state import ResearcherState, ResearcherStateInput, ResearcherStateOutput, QuerySearchState, QuerySearchStateInput, QuerySearchStateOutput
-from src.assistant.prompts import RESEARCH_QUERY_WRITER_PROMPT, RELEVANCE_EVALUATOR_PROMPT, SUMMARIZER_PROMPT, REPORT_WRITER_PROMPT, FINANCIAL_PROMPT, get_structure_prompt
-from src.assistant.utils import format_documents_with_metadata, invoke_llm, invoke_ollama, parse_output, tavily_search, Evaluation, Queries, StockPrice, parse_stock_price, invoke_ollama_chat
+from src.assistant.state import (
+    ResearcherState,
+    ResearcherStateInput,
+    ResearcherStateOutput,
+    QuerySearchState,
+    QuerySearchStateInput,
+    QuerySearchStateOutput,
+)
+from src.assistant.prompts import (
+    RESEARCH_QUERY_WRITER_PROMPT,
+    RELEVANCE_EVALUATOR_PROMPT,
+    SUMMARIZER_PROMPT,
+    REPORT_WRITER_PROMPT,
+    FINANCIAL_PROMPT,
+    get_structure_prompt,
+)
+from src.assistant.utils import (
+    format_documents_with_metadata,
+    invoke_llm,
+    invoke_ollama,
+    parse_output,
+    tavily_search,
+    Evaluation,
+    Queries,
+    StockPrice,
+    parse_stock_price,
+    invoke_ollama_chat,
+    extract_most_recent_date,
+)
+from src.assistant.yfinance import YFinanceTools
 from langchain_core.messages import HumanMessage, AIMessage
-import yfinance as yf
-from phi.tools.yfinance import YFinanceTools
 
 # Number of query to process in parallel for each batch
 # Change depending on the performance of the system
@@ -140,27 +165,33 @@ def web_research(state: QuerySearchState):
     print("--- Web research ---")
     output = tavily_search(state["query"])
     search_results = output["results"]
-    print("Web search results:", search_results)
+    # print("Web search results:", search_results)
     return {"web_search_results": search_results}
 
 
 def yfinance_search(state: QuerySearchState):
     print("--- YFinance search ---")
     symbol = state["symbol"]
+    query = state["query"]
     tool = YFinanceTools(
         enable_all=True,
     )
     # extract symbol and date from query
+    datetime = extract_most_recent_date(query)
     stock_fundmental = tool.get_stock_fundamentals(symbol)
-    history_stock = tool.get_historical_stock_prices(symbol, period = "3mo")
+    print("datetime", datetime)
+    history_stock = tool.get_historical_stock_prices(
+        symbol, period="3mo", datetime=datetime
+    )
+    print("History stock", history_stock)
     analysis = tool.get_analyst_recommendations(symbol)
     financial_ratio = tool.get_key_financial_ratios(symbol)
     # news = tool.get_company_news(symbol)
-    technical_indicator = tool.get_technical_indicators(symbol, period = "3mo")
 
     # concatentate the information with thest str output
-    finance_info = f"Stock Fundamentals:\n{stock_fundmental}\n\nHistorical Stock Prices:\n{history_stock}\n\nAnalyst Recommendations:\n{analysis}\n\nKey Financial Ratios:\n{financial_ratio}\n\nTechnical Indicators:\n{technical_indicator}"
-    print("YFinance information:", finance_info)
+    # finance_info = f"Stock Fundamentals:\n{stock_fundmental}\n\nHistorical Stock Prices:\n{history_stock}\n\nAnalyst Recommendations:\n{analysis}\n\nKey Financial Ratios:\n{financial_ratio}\n\nNews:\n{news}"
+    finance_info = f"Stock Fundamentals:\n{stock_fundmental}\n\nHistorical Stock Prices:\n{history_stock}\n\nAnalyst Recommendations:\n{analysis}\n\nKey Financial Ratios:\n{financial_ratio}"
+    
     return {"yfinance_info": finance_info}
 
 
