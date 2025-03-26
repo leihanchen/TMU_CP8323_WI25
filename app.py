@@ -41,7 +41,7 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
     """
     # Update local rag vector database
     ticker_reports = find_reports_for_ticker(symbols, rag_file_folder=rag_file_folder)
-
+    
     if len(ticker_reports):
         if(process_found_files(ticker_reports.values())):
             print(f"Processed {len(ticker_reports)} new files successfully!")
@@ -131,7 +131,6 @@ def fetch_ticker(type: Literal["sp500", "sp100"] = "sp100"):
         raise ValueError("Invalid type. Use 'sp100' or 'sp500'")
     
     tickers = sp_table['Symbol'].tolist()
-    print("tickers: ", tickers)
     return tickers
 
 def main():
@@ -197,28 +196,28 @@ def main():
     # Fetch tickers and add ticker selector
     tickers = fetch_ticker()
     selected_ticker = st.sidebar.selectbox("Select Ticker", tickers)
+    
     # Update selected ticker in session state
-    if True:
-        st.session_state.selected_ticker = selected_ticker
+    st.session_state.selected_ticker = selected_ticker
 
-        # Find reports for the selected ticker
-        ticker_reports = find_reports_for_ticker(selected_ticker)
+    # Find reports for the selected ticker
+    ticker_reports = find_reports_for_ticker(selected_ticker, DATA_PATH)
 
-        if ticker_reports:
-            st.sidebar.markdown("### Available Reports")
-            for report_name, _ in ticker_reports.items():
-                st.sidebar.text(f"📄 {report_name}")
+    if ticker_reports:
+        st.sidebar.markdown("### Available Reports")
+        for report_name, _ in ticker_reports.items():
+            st.sidebar.text(f"📄 {report_name}")
 
-            new_files = set(ticker_reports.values()) - st.session_state.processed_files
-            if new_files:
-                with st.sidebar.status("Processing new files...", expanded=False) as status:
-                    if process_found_files(new_files):
-                        st.session_state.processed_files.update(new_files)
-                        status.update(label=f"Processed {len(new_files)} new files successfully!", state="complete")
-            else:
-                st.sidebar.warning("No new files to process")
+        # new_files = set(ticker_reports.values()) - st.session_state.processed_files
+        # if new_files:
+        #     with st.sidebar.status("Processing new files...", expanded=False) as status:
+        #         if process_found_files(new_files):
+        #             st.session_state.processed_files.update(new_files)
+        #             status.update(label=f"Processed {len(new_files)} new files successfully!", state="complete")
         else:
-            st.sidebar.warning(f"No reports found for {selected_ticker}")
+            st.sidebar.warning("No new files to process")
+    else:
+        st.sidebar.warning(f"No reports found for {selected_ticker}")
 
     # Connect ngrok only if not already connected
     st.session_state.public_url = "https://403c-141-117-231-104.ngrok-free.app"

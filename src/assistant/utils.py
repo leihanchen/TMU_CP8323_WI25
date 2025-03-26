@@ -296,8 +296,7 @@ def process_uploaded_files(uploaded_files, unprocessed_files_str):
 
 def process_found_files(unprocessed_files_str):
     temp_folder = "temp_files"
-    if not os.path.exists(temp_folder):
-        os.makedirs(temp_folder, exist_ok=True)
+    os.makedirs(temp_folder, exist_ok=True)
 
     try:
         for uploaded_file in unprocessed_files_str:
@@ -307,7 +306,7 @@ def process_found_files(unprocessed_files_str):
 
             # Copy file in the temp_file_path
             shutil.copy(uploaded_file, temp_file_path)
-            
+
             # Choose the appropriate loader
             if file_extension == "csv":
                 loader = CSVLoader(temp_file_path)
@@ -317,10 +316,18 @@ def process_found_files(unprocessed_files_str):
                 loader = PDFPlumberLoader(temp_file_path)
             elif file_extension == "json":
                 # Load JSON Lines format with jq schema to combine title and summary
-                loader = JSONLoader(
-                    file_path=temp_file_path,
-                    jq_schema=".[].text",
-                )
+                if "News" in file_name:
+                    loader = JSONLoader(
+                        file_path=temp_file_path,
+                        # jq_schema="[].{date: .date, summary: .summary}",
+                        jq_schema=".[] | {summary: .summary, date: .date}",
+                        text_content=False,
+                    )
+                else:
+                    loader = JSONLoader(
+                        file_path=temp_file_path,
+                        jq_schema=".[].text",
+                    )
             else:
                 continue
 
