@@ -1,6 +1,9 @@
 import csv
 import datetime
 import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from app import generate_response, fetch_ticker
 from langchain_core.messages import HumanMessage
@@ -89,6 +92,7 @@ def automate_past_six_months(companies):
             results.append([company, year, month, price])
     return results
 
+
 if __name__ == "__main__":
     tickers = fetch_ticker()[:10]
     past_6_months_data = automate_past_six_months(tickers)
@@ -97,3 +101,49 @@ if __name__ == "__main__":
         writer.writerow(["Ticker", "Year", "Month", "Price"])
         for row in past_6_months_data:
             writer.writerow(row)
+
+
+def compare_stock_predictions(predicted_csv, actual_csv):
+    # Load data from both CSV files
+    df_predicted = pd.read_csv(predicted_csv)
+    df_actual = pd.read_csv(actual_csv)
+
+    # Merge the two dataframes
+    df_merged = pd.merge(
+        df_predicted,
+        df_actual,
+        on=['Ticker', 'Year', 'Month'],
+        suffixes=('_pred', '_actual')
+    )
+
+    # Rename columns for clarity
+    df_merged.rename(columns={
+        'PredictedPrice': 'pred',
+        'ActualPrice': 'actual'
+    }, inplace=True)
+
+    # Calculate metrics
+    df_merged['error'] = df_merged['pred'] - df_merged['actual']
+    mae = df_merged['error'].abs().mean()
+    mse = (df_merged['error'] ** 2).mean()
+    rmse = np.sqrt(mse)
+    mape = (df_merged['error'].abs() / df_merged['actual'].abs()).mean() * 100
+
+    # Print results
+    print("MAE:", mae)
+    print("MSE:", mse)
+    print("RMSE:", rmse)
+    print("MAPE:", mape, "%")
+
+    # Visualization
+    plt.figure(figsize=(10, 6))
+    plt.plot(df_merged['actual'], label='Actual')
+    plt.plot(df_merged['pred'], label='Predicted')
+    plt.title("Predicted vs Actual Stock Prices")
+    plt.xlabel("Data Points")
+    plt.ylabel("Stock Price")
+    plt.legend()
+    plt.show()
+
+if __name__ == "__main__":
+    compare_stock_predictions('stock_predictions.csv', 'yfinance_data.csv')
