@@ -121,11 +121,27 @@ def compare_stock_predictions(predicted_csv, actual_csv):
     rmse = np.sqrt(mse)
     mape = (df_merged['error'].abs() / df_merged['actual'].abs()).mean() * 100
 
+    # Calculate direction-based metrics
+    df_merged.sort_values(by=['Ticker', 'Year', 'Month'], inplace=True)
+    df_merged['pred_diff'] = df_merged.groupby('Ticker')['pred'].diff()
+    df_merged['actual_diff'] = df_merged.groupby('Ticker')['actual'].diff()
+    df_merged.dropna(subset=['pred_diff', 'actual_diff'], inplace=True)
+
+    df_merged['direction_correct'] = (df_merged['pred_diff'] * df_merged['actual_diff'] > 0).astype(int)
+    directional_accuracy = df_merged['direction_correct'].mean()
+    mean_directional_accuracy = directional_accuracy
+
+    # Pearson Correlation
+    pcc = df_merged['pred'].corr(df_merged['actual'])
+
     # Print results
     print("MAE:", mae)
     print("MSE:", mse)
     print("RMSE:", rmse)
-    print("MAPE:", mape, "%")
+    print("MAPE:", mape, "\\%")
+    print("Directional Accuracy (DA):", directional_accuracy)
+    print("Mean Directional Accuracy (MDA):", mean_directional_accuracy)
+    print("Pearson Correlation Coefficient (PCC):", pcc)
 
     # Visualization
     plt.figure(figsize=(10, 6))
