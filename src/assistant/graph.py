@@ -25,6 +25,7 @@ from src.assistant.prompts import (
     get_structure_prompt,
 )
 from src.assistant.utils import (
+    duckduckgo_search,
     format_documents_with_metadata,
     invoke_llm,
     invoke_ollama,
@@ -43,7 +44,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 # Number of query to process in parallel for each batch
 # Change depending on the performance of the system
 BATCH_SIZE = 3
-MODEL_ID = "deepseek-r1:7b"
+MODEL_ID = "deepseek-r1:7b" #"gemma3:1b"
 
 def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     print("--- Generating research queries ---")
@@ -164,7 +165,7 @@ def route_research(state: QuerySearchState, config: RunnableConfig) -> Literal["
 
 def web_research(state: QuerySearchState):
     print("--- Web research ---")
-    output = tavily_search(state["query"])
+    output = duckduckgo_search(state["query"])
     search_results = output["results"]
     # print("Web search results:", search_results)
     return {"web_search_results": search_results}

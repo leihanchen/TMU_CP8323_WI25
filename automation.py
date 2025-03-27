@@ -83,21 +83,28 @@ def automation(companies: list[str], rag_file_folder: str, past_months: int = 3)
             month = date_point.month
             prompt = f"Please predict {company} stock price, for the first 7-day average stock price in {month}/{year}. Also please predict {company} financial sentiment with confidence score (between -1(negative) and 1(positive)) in the same month."
             response = generate_experiment_response(
-                user_input=prompt,
-                enable_web_search=True,
-                max_search_queries=3,
-                rag_file_folder=rag_file_folder,
-                processed_files=processed_files,
-                symbols=company,
-            )
+                    user_input=prompt,
+                    enable_web_search=True,
+                    max_search_queries=3,
+                    rag_file_folder=rag_file_folder,
+                    processed_files=processed_files,
+                    symbols=company,
+                )
             if isinstance(response, str):
                 results.append([company, year, month, "N/A", "N/A", "N/A"])
                 continue
+            print(company, i, "final response generating")
+            print(response.get("final_answer", {}))
             price = response.get("final_answer", {}).get("price", "N/A")
             sentiment = response.get("final_answer", {}).get("sentiment", "N/A")
             print("price: ", price, " month: ", month, " year: ", year, "sentiment: ", sentiment,  " symbol: ", company)
             confidence_score = response.get("final_answer", {}).get("confidence_score", "N/A")
             results.append([company, year, month, price, sentiment, confidence_score])
+        with open('deepseek_test1.csv', 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["Ticker", "Year", "Month", "Price", "Sentiment", "ConfidenceScore"])
+            for row in results:
+                writer.writerow(row)
     return results
 
 

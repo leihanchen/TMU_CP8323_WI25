@@ -43,28 +43,31 @@ def add_documents(documents):
     Args:
         documents: List of documents to add to the vector store
     """
-    embeddings = HuggingFaceEmbeddings()
-    
-    # Process the new documents
-    semantic_text_splitter = SemanticChunker(embeddings)
-    documents = semantic_text_splitter.split_documents(documents)
+    try:
+        embeddings = HuggingFaceEmbeddings()
+        
+        # Process the new documents
+        semantic_text_splitter = SemanticChunker(embeddings)
+        documents = semantic_text_splitter.split_documents(documents)
 
-    # Split resulting documents into smaller chunks SemanticChunker
-    # doesn't have a max chunk size parameter, so we use 
-    # RecursiveCharacterTextSplitter to avoid having large chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
-    split_documents = text_splitter.split_documents(documents)
+        # Split resulting documents into smaller chunks SemanticChunker
+        # doesn't have a max chunk size parameter, so we use 
+        # RecursiveCharacterTextSplitter to avoid having large chunks
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+        split_documents = text_splitter.split_documents(documents)
 
-    if os.path.exists(VECTOR_DB_PATH) and os.listdir(VECTOR_DB_PATH):
-        # Add to existing vector store
-        vectorstore = Chroma(persist_directory=VECTOR_DB_PATH, embedding_function=embeddings)
-        vectorstore.add_documents(split_documents)
-    else:
-        # Create new vector store if it doesn't exist
-        vectorstore = Chroma.from_documents(
-            split_documents,
-            embeddings,
-            persist_directory=VECTOR_DB_PATH
-        )
+        if os.path.exists(VECTOR_DB_PATH) and os.listdir(VECTOR_DB_PATH):
+            # Add to existing vector store
+            vectorstore = Chroma(persist_directory=VECTOR_DB_PATH, embedding_function=embeddings)
+            vectorstore.add_documents(split_documents)
+        else:
+            # Create new vector store if it doesn't exist
+            vectorstore = Chroma.from_documents(
+                split_documents,
+                embeddings,
+                persist_directory=VECTOR_DB_PATH
+            )
 
-    return vectorstore
+        return vectorstore
+    except:
+        return
