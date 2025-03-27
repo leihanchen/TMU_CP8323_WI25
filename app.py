@@ -12,7 +12,6 @@ from src.assistant.graph import researcher
 from src.assistant.utils import get_report_structures, process_uploaded_files, process_found_files
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
-from pyngrok import ngrok
 
 load_dotenv()
 
@@ -34,7 +33,7 @@ def find_reports_for_ticker(ticker):
     return reports
 
 
-def generate_response(user_input, enable_web_search, report_structure, max_search_queries, chat_history, symbols=None):
+def generate_response(user_input, enable_web_search, max_retrieved_documents, max_search_queries, chat_history, symbols=None):
     """
     Generate response using the researcher agent and stream steps
     """
@@ -48,7 +47,7 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
     # Langgraph researcher config
     config = {"configurable": {
         "enable_web_search": enable_web_search,
-        "report_structure": report_structure,
+        "max_retrieved_documents" : max_retrieved_documents,
         "max_search_queries": max_search_queries,
     }}
 
@@ -78,10 +77,15 @@ def generate_response(user_input, enable_web_search, report_structure, max_searc
 
             elif key == "generate_final_answer":
                 is_dict_instance = isinstance(value["final_answer"], dict)
-                value_reasoning = value["final_answer"]["think"] if is_dict_instance and (value["final_answer"].get("think") is not None) else "No reasoning generated"
+                value_reasoning = value["final_answer"]["reasoning"] if is_dict_instance and (value["final_answer"].get("reasoning") is not None) else "No reasoning generated"
+                value_response = "No response generated"
+                has_response = False
                 if is_dict_instance:
                     value["final_answer"].pop("think", "Think trace not found")
-                value_response = value["final_answer"] if is_dict_instance else "No response generated"
+                    has_response = False if value["final_answer"].get("response") is None else True
+                
+                if has_response:
+                    value_response = value["final_answer"]["response"]
                 
                 with final_answer_expander:
                     st.write(value_response)
@@ -118,8 +122,8 @@ def main():
         st.session_state.processing_complete = False
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "selected_report_structure" not in st.session_state:
-        st.session_state.selected_report_structure = None
+    if "max_retrieve_documents" not in st.session_state:
+        st.session_state.max_retrieve_documents = None
     if "max_search_queries" not in st.session_state:
         st.session_state.max_search_queries = 3  # Default value of 3
     if "chat_history" not in st.session_state:
@@ -131,9 +135,8 @@ def main():
     if "process_clicked" not in st.session_state:
         st.session_state.process_clicked = False
 
-    # Initialize ngrok connection flag
-    if "ngrok_connected" not in st.session_state:
-        st.session_state.ngrok_connected = False
+    # Initialize public url flag
+    if "public_url" not in st.session_state:
         st.session_state.public_url = None
 
     # Title row with clear button
@@ -152,17 +155,15 @@ def main():
     report_structures = get_report_structures()
     default_report = "none"
 
-    selected_structure = st.sidebar.selectbox(
-        "Report Structure",
-        options=list(report_structures.keys()),
-        index=list(map(str.lower, report_structures.keys())).index(default_report),
-        help="Select the structure for the generated report."
+    # create a slider for choose maximum number of similarity documents between 1 to 10
+    max_retrieved_documents = st.sidebar.slider(
+        "Max retrieved documents",
+        min_value=0,
+        max_value=10,
+        value=3,
+        step=1,
     )
-
-    st.session_state.selected_report_structure = {
-        "name": selected_structure,
-        "content": report_structures[selected_structure]
-    }
+    st.session_state.max_retrieve_documents = max_retrieved_documents
 
     # Maximum search queries input
     st.session_state.max_search_queries = st.sidebar.number_input(
@@ -192,7 +193,6 @@ def main():
             for report_name, _ in ticker_reports.items():
                 st.sidebar.text(f"📄 {report_name}")
 
-            print("create process button")
             # Create process button
             process_button = st.sidebar.button(
                 "Process Files",
@@ -200,7 +200,6 @@ def main():
                 use_container_width=True,
                 key="process_button",
             )
-            print("process button ", process_button)
             if process_button:
                 print("Process button clicked")
                 st.session_state.process_clicked = True
@@ -220,11 +219,9 @@ def main():
         else:
             st.sidebar.warning(f"No reports found for {selected_ticker}")
 
-    # Connect ngrok only if not already connected
-    if not st.session_state.ngrok_connected:
-        ngrok.set_auth_token("2tXPwDst3Zu00YOYMDzYjCnQZ96_Sz2BVfU7jCHmg5bBmffc")
-        st.session_state.public_url = "https://403c-141-117-231-104.ngrok-free.app"
-        st.session_state.ngrok_connected = True
+    # Manually set ngrok public url
+    if not st.session_state.public_url:
+        st.session_state.public_url = "https://f14b-141-117-231-1.ngrok-free.app"
 
     # Display chat messages
     for idx, message in enumerate(st.session_state.messages):
@@ -244,21 +241,28 @@ def main():
             st.write(user_input)
 
         # Generate and display assistant response
-        report_structure = st.session_state.selected_report_structure["content"]
         assistant_response = generate_response(
             user_input, 
             enable_web_search, 
-            report_structure,
+            st.session_state.max_retrieve_documents,
             st.session_state.max_search_queries,
             st.session_state.chat_history,
             st.session_state.selected_ticker
         )
-
+        if assistant_response.get("final_answer") is not None:
+            if isinstance(assistant_response["final_answer"], str):
+                assistant_response = assistant_response["final_answer"]
+            else:
+                assistant_response = (
+                    assistant_response["final_answer"]["response"]
+                    if assistant_response["final_answer"].get("response") is not None
+                    else "No response generated"
+                )
         # Add assistant response to chat history
-        if isinstance(assistant_response, dict):
-            print("Predicted price: ", assistant_response["final_answer"])
-        st.session_state.chat_history.append(AIMessage(content=str(assistant_response)))
-        st.session_state.messages.append({"role": "assistant", "content": str(assistant_response)})
+        st.session_state.chat_history.append(AIMessage(content=assistant_response))
+        st.session_state.messages.append(
+            {"role": "assistant", "content": assistant_response}
+        )
 
         with st.chat_message("assistant"):
             st.write(assistant_response)  # AI response

@@ -3,6 +3,7 @@ RESEARCH_QUERY_WRITER_PROMPT = """You are an expert Query Writer who specializes
 Your goal is to generate the necessary queries to complete the user's goal based on their instructions. Ensure the queries are concise, relevant, and avoid redundancy.
 
 Your output must only be a JSON object containing a single key "queries":
+{{ "queries": ["Query 1", "Query 2",...] }}
 
 # NOTE:
 * You can generate up to {max_queries} queries, but only as many as needed to effectively address the user's research goal.
@@ -94,14 +95,6 @@ PROVIDED INFORMATION:
 - Focus ONLY on factual, objective information
 - Avoid redundancy, repetition, or unnecessary commentary
 - List financial relevant metrics and results in the summary
-- Your output must only be a JSON object containing a with the following keys:
-    - "stock_summary": summary of the stock financial performance
-    - "ticker": the symbol of the stock
-    - "price": stock predited price
-    - "currency": currency
-    - "sentiment": financial sentiment
-    - "confidence_score": confidence score of the sentiment
-    - "think": your reasoning trace how to answer the question 
 """
 
 def get_structure_prompt(structure_name):

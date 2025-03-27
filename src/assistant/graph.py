@@ -36,6 +36,7 @@ from src.assistant.utils import (
     parse_stock_price,
     invoke_ollama_chat,
     extract_most_recent_date,
+    duckduckgo_search,
 )
 from src.assistant.yfinance import YFinanceTools
 from langchain_core.messages import HumanMessage, AIMessage
@@ -101,14 +102,15 @@ def check_more_queries(state: ResearcherState) -> Literal["search_queries", "gen
         return "search_queries"
     return "generate_final_answer"
 
-def retrieve_rag_documents(state: QuerySearchState):
+def retrieve_rag_documents(state: QuerySearchState, config: RunnableConfig):
     """Retrieve documents from the RAG database."""
     print("--- Retrieving documents ---")
     query = state["query"]
     vectorstore = get_or_create_vector_db()
     if vectorstore is None:
         return {"retrieved_documents": None}
-    vectorstore_retreiver = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+    max_retrieved_documents = config["configurable"].get("max_retrieved_documents", 3)
+    vectorstore_retreiver = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": max_retrieved_documents})
     documents = vectorstore_retreiver.invoke(query)
 
     return {"retrieved_documents": documents}
@@ -163,7 +165,8 @@ def route_research(state: QuerySearchState, config: RunnableConfig) -> Literal["
 
 def web_research(state: QuerySearchState):
     print("--- Web research ---")
-    output = tavily_search(state["query"])
+    # output = tavily_search(state["query"])
+    output = duckduckgo_search(state["query"])
     search_results = output["results"]
     # print("Web search results:", search_results)
     return {"web_search_results": search_results}
@@ -246,7 +249,7 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
             "final_answer": "Unable to generate answer: No research summaries available"
         }
     
-    report_structure = config["configurable"].get("report_structure", "")
+    # report_structure = config["configurable"].get("report_structure", "")
     structure_name = config["configurable"].get("structure_name", "none")
     structure_prompt = get_structure_prompt(structure_name)
 
@@ -278,11 +281,11 @@ def generate_final_answer(state: ResearcherState, config: RunnableConfig):
         model=MODEL_ID,
         system_prompt=answer_prompt,
         user_prompt=f"Generate a summary of the company financial situation and a prediction using the provided information and chat history with user instructions: {state['user_instructions']}",
-        output_format=StockPrice
+        # output_format=StockPrice
     )
     # Remove thinking part (reasoning between <think> tags)
-    # parsing_result = parse_output(result)
-    parsing_result = parse_stock_price(result)
+    parsing_result = parse_output(result)
+    # parsing_result = parse_stock_price(result)
     # answer = parsing_result["response"]
     return {"final_answer": parsing_result}
 

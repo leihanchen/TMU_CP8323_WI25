@@ -3,6 +3,7 @@ import re
 import shutil
 from ollama import chat, Client
 from tavily import TavilyClient
+from duckduckgo_search import DDGS
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from dateparser.search import search_dates
@@ -221,6 +222,35 @@ def tavily_search(query, include_raw_content=True, max_results=3):
         include_raw_content=include_raw_content
     )
 
+
+def duckduckgo_search(query, max_results=3):
+    """Search the web using the DuckDuckGo Search API.
+
+    Args:
+        query (str): The search query to execute
+        max_results (int): Maximum number of results to return
+
+    Returns:
+        dict: Search response containing:
+            - results (list): List of search result dictionaries, each containing:
+                - title (str): Title of the search result
+                - url (str): URL of the search result
+                - content (str): Snippet/summary of the content
+                - raw_content (None): Set to None (not supported in DDG)
+    """
+    results = []
+    with DDGS() as ddgs:
+        for r in ddgs.text(query, max_results=max_results):
+            results.append({
+                "title": r.get("title"),
+                "url": r.get("href"),
+                "content": r.get("body"),
+                "raw_content": None  # DuckDuckGo doesn't provide full page content
+            })
+
+    return {"results": results}
+
+
 def get_report_structures(reports_folder="report_structures"):
     """
     Loads report structures from .md or .txt files in the specified folder.
@@ -317,10 +347,17 @@ def process_found_files(unprocessed_files_str):
                 loader = PDFPlumberLoader(temp_file_path)
             elif file_extension == "json":
                 # Load JSON Lines format with jq schema to combine title and summary
-                loader = JSONLoader(
-                    file_path=temp_file_path,
-                    jq_schema=".[].text",
-                )
+                if "News" in uploaded_file:
+                    loader = JSONLoader(
+                        file_path=temp_file_path,
+                        jq_schema=".[] | {summary: .summary, date: .date}",
+                        text_content=False,
+                    )
+                else:
+                    loader = JSONLoader(
+                        file_path=temp_file_path,
+                        jq_schema=".[].text",
+                    )
             else:
                 continue
 
