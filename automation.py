@@ -127,6 +127,16 @@ def compare_stock_predictions(predicted_csv, actual_csv):
         'ActualPrice': 'actual'
     }, inplace=True)
 
+    # Replace 'N/A' with NaN, then drop rows with missing predictions
+    df_merged['pred'].replace('N/A', np.nan, inplace=True)
+    df_merged['actual'].replace('N/A', np.nan, inplace=True)
+    df_merged.dropna(subset=['pred', 'actual'], inplace=True)
+
+    # Convert to numeric
+    df_merged['pred'] = pd.to_numeric(df_merged['pred'], errors='coerce')
+    df_merged['actual'] = pd.to_numeric(df_merged['actual'], errors='coerce')
+    df_merged.dropna(subset=['pred', 'actual'], inplace=True)
+
     # Calculate metrics
     df_merged['error'] = df_merged['pred'] - df_merged['actual']
     mae = df_merged['error'].abs().mean()
