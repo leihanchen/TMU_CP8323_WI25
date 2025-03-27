@@ -55,8 +55,12 @@ def extract_most_recent_date(text: str) -> str:
     return most_recent.strftime("%Y-%m-%d")
 
 def parse_output(text):
-    think = re.search(r'<think>(.*?)</think>', text, re.DOTALL).group(1).strip()
-    output = re.search(r'</think>\s*(.*?)$', text, re.DOTALL).group(1).strip()
+    if re.search(r'<think>(.*?)</think>', text, re.DOTALL) is not None:
+        think = re.search(r'<think>(.*?)</think>', text, re.DOTALL).group(1).strip()
+        output = re.search(r'</think>\s*(.*?)$', text, re.DOTALL).group(1).strip()
+    else:
+        think = "Not a reasoning model"
+        output = text
 
     return {
         "reasoning": think,
@@ -220,6 +224,36 @@ def tavily_search(query, include_raw_content=True, max_results=3):
         max_results=max_results,
         include_raw_content=include_raw_content
     )
+
+from duckduckgo_search import DDGS
+
+def duckduckgo_search(query, max_results=3):
+    """Search the web using the DuckDuckGo Search API.
+
+    Args:
+        query (str): The search query to execute
+        max_results (int): Maximum number of results to return
+
+    Returns:
+        dict: Search response containing:
+            - results (list): List of search result dictionaries, each containing:
+                - title (str): Title of the search result
+                - url (str): URL of the search result
+                - content (str): Snippet/summary of the content
+                - raw_content (None): Set to None (not supported in DDG)
+    """
+    results = []
+    with DDGS() as ddgs:
+        for r in ddgs.text(query, max_results=max_results):
+            results.append({
+                "title": r.get("title"),
+                "url": r.get("href"),
+                "content": r.get("body"),
+                "raw_content": None  # DuckDuckGo doesn't provide full page content
+            })
+
+    return {"results": results}
+
 
 def get_report_structures(reports_folder="report_structures"):
     """
