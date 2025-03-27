@@ -78,10 +78,10 @@ def automation(companies: list[str], rag_file_folder: str, past_months: int = 3)
     processed_files = set()
     for company in companies:
         for i in range(past_months):
-            date_point = today - relativedelta(months=i+1)
+            date_point = today - relativedelta(months=i)
             year = date_point.year
             month = date_point.month
-            prompt = f"Please predict {company} stock price, financial sentiment with its confidence score (between -1(negative) and 1(positive)) for the 7-day average stock price of {month}/{year}."
+            prompt = f"Please predict {company} stock price, for the first 7-day average stock price in {month}/{year}. Also please predict {company} financial sentiment with confidence score (between -1(negative) and 1(positive)) in the same month."
             response = generate_experiment_response(
                 user_input=prompt,
                 enable_web_search=True,
@@ -90,8 +90,12 @@ def automation(companies: list[str], rag_file_folder: str, past_months: int = 3)
                 processed_files=processed_files,
                 symbols=company,
             )
+            if isinstance(response, str):
+                results.append([company, year, month, "N/A", "N/A", "N/A"])
+                continue
             price = response.get("final_answer", {}).get("price", "N/A")
             sentiment = response.get("final_answer", {}).get("sentiment", "N/A")
+            print("price: ", price, " month: ", month, " year: ", year, "sentiment: ", sentiment,  " symbol: ", company)
             confidence_score = response.get("final_answer", {}).get("confidence_score", "N/A")
             results.append([company, year, month, price, sentiment, confidence_score])
     return results

@@ -70,6 +70,7 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     #     user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
     #     output_format=Queries
     # )
+    print("Generated queries:", result.queries)
     return {"research_queries": result.queries, "symbol": state["symbol"]}
 
 def initiate_query_research(state: ResearcherState):
@@ -178,6 +179,7 @@ def yfinance_search(state: QuerySearchState):
     )
     # extract symbol and date from query
     datetime = extract_most_recent_date(query)
+    print("Datetime:", datetime)
     stock_fundmental = tool.get_stock_fundamentals(symbol)
     history_stock = tool.get_historical_stock_prices(
         symbol, period="3mo", datetime=datetime

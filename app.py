@@ -119,10 +119,9 @@ def generate_experiment_response(user_input, enable_web_search, max_search_queri
             processed_files.add(os.path.basename(value))
             unprocessed_files.append(value)
     
-    if len(unprocessed_files):
-        if(process_found_files(unprocessed_files)):
-            print(f"Processed {len(ticker_reports)} new files successfully with symbol {symbols}!")
-    elif len(ticker_reports):
+    if len(unprocessed_files) and process_found_files(unprocessed_files):
+        print(f"Processed {len(ticker_reports)} new files successfully with symbol {symbols}!")
+    elif len(ticker_reports) == 0:
         print(f"No reports found for {symbols}")
     else:
         print(f"Relevant files are processed for {symbols}")
