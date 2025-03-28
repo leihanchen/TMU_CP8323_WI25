@@ -3,7 +3,7 @@ try:
     import yfinance as yf
 except ImportError:
     raise ImportError("`yfinance` not installed. Please install using `pip install yfinance`.")
-
+import datetime
 
 class YFinanceTools:
     def __init__(
@@ -94,13 +94,13 @@ class YFinanceTools:
         except Exception as e:
             return f"Error fetching company profile for {symbol}: {e}"
 
-    def get_historical_stock_prices(self, symbol: str, period: str = "1mo", interval: str = "1d", datetime: str = None) -> str:
+    def get_historical_stock_prices(self, symbol: str, period: str = "1mo", interval: str = "1d", end_date: str = None) -> str:
         """
         Use this function to get the historical stock price for a given symbol.
 
         Args:
             symbol (str): The stock symbol.
-            datetime (str): The date from which to retrieve historical prices.
+            end_date (str): The date from which to retrieve historical prices.
             period (str): The period for which to retrieve historical prices. Defaults to "1mo".
                         Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
             interval (str): The interval between data points. Defaults to "1d".
@@ -111,8 +111,10 @@ class YFinanceTools:
         """
         try:
             stock = yf.Ticker(symbol)
-            if datetime is not None:
-                historical_price = stock.history(period=period, end=datetime, interval=interval)
+            if end_date is not None:
+                end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+                start_date = end_date - datetime.timedelta(days=90)
+                historical_price = stock.history(start=start_date, end=end_date, interval=interval)
             else:
                 historical_price = stock.history(period=period, interval=interval)
             return historical_price.to_json(orient="index")

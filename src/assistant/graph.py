@@ -45,6 +45,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 # Change depending on the performance of the system
 BATCH_SIZE = 3
 MODEL_ID = "deepseek-r1:7b" #"gemma3:1b"
+QUERY_MODEL_ID = "deepseek-r1:7b"
 
 def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     print("--- Generating research queries ---")
@@ -58,7 +59,7 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model=MODEL_ID,
+        model=QUERY_MODEL_ID,
         system_prompt=query_writer_prompt,
         user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
         output_format=Queries
@@ -179,11 +180,11 @@ def yfinance_search(state: QuerySearchState):
         enable_all=True,
     )
     # extract symbol and date from query
-    datetime = extract_most_recent_date(query)
-    print("Datetime:", datetime)
+    end_time = extract_most_recent_date(query)
+    print("end_time:", datetime)
     stock_fundmental = tool.get_stock_fundamentals(symbol)
     history_stock = tool.get_historical_stock_prices(
-        symbol, period="3mo", datetime=datetime
+        symbol, period="3mo", end_date=end_time
     )
     analysis = tool.get_analyst_recommendations(symbol)
     financial_ratio = tool.get_key_financial_ratios(symbol)
