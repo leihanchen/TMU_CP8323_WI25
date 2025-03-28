@@ -45,6 +45,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 # Change depending on the performance of the system
 BATCH_SIZE = 3
 MODEL_ID = "deepseek-r1:7b"
+SUMMARY_MODEL_ID = "gemma3:1b"
 
 def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     print("--- Generating research queries ---")
@@ -58,7 +59,7 @@ def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     
     # Using local Deepseek R1 model with Ollama
     result = invoke_ollama(
-        model=MODEL_ID,
+        model=SUMMARY_MODEL_ID,
         system_prompt=query_writer_prompt,
         user_prompt=f"Generate research queries for this user instruction: {user_instructions}",
         output_format=Queries
