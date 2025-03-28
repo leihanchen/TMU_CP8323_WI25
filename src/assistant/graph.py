@@ -45,7 +45,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 # Change depending on the performance of the system
 BATCH_SIZE = 3
 MODEL_ID = "deepseek-r1:7b"
-SUMMARY_MODEL_ID = "gemma3:1b"
+SUMMARY_MODEL_ID = "deepseek-r1:7b"
 
 def generate_research_queries(state: ResearcherState, config: RunnableConfig):
     print("--- Generating research queries ---")
@@ -161,8 +161,8 @@ def route_research(state: QuerySearchState, config: RunnableConfig) -> Literal["
         print("Documents are not relevant. Finding web search results.")
         return "web_research"
     else:
-        print("No relevant documents and web search disabled. Skipping query.")
-        return "__end__"
+        print("No relevant documents and web search disabled. Only relies on yfinance.")
+        return "yfinance_search"
 
 def web_research(state: QuerySearchState):
     print("--- Web research ---")
@@ -181,11 +181,11 @@ def yfinance_search(state: QuerySearchState):
         enable_all=True,
     )
     # extract symbol and date from query
-    datetime = extract_most_recent_date(query)
+    end_time = extract_most_recent_date(query)
     stock_fundmental = tool.get_stock_fundamentals(symbol)
-    print("datetime", datetime)
+    print("end_time", end_time)
     history_stock = tool.get_historical_stock_prices(
-        symbol, period="3mo", datetime=datetime
+        symbol, period="3mo", end_date=end_time
     )
     print("History stock", history_stock)
     analysis = tool.get_analyst_recommendations(symbol)
@@ -223,7 +223,7 @@ def summarize_query_research(state: QuerySearchState):
 
     # Combine all information
     combined_info = "\n\n---\n\n".join(information)
-    print("Combined information:", combined_info)
+    # print("Combined information:", combined_info)
     summary_prompt = SUMMARIZER_PROMPT.format(
         query=query,
         docmuents=combined_info
