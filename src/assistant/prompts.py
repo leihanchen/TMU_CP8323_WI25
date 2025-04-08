@@ -99,9 +99,11 @@ PROVIDED INFORMATION:
     - "ticker": the symbol of the stock
     - "price": stock predited price
     - "currency": currency
-    - "sentiment": financial sentiment
-    - "confidence_score": confidence score of the sentiment
+    - "sentiment": financial sentiment, should be one of "positive", "neutral", or "negative"
+    - "confidence_score": confidence score of the sentiment, should be within -1(negative) to 1(positive)
     - "think": your reasoning trace how to answer the question 
+- Prediction should rely on the provided information and be based on logical reasoning
+- Analyze provided information step by step. For each factor, explain how it might influence company stock price. Then, based on your analysis, predict the stock price for one month from now. Provide your reasoning and a specific price prediction.
 """
 
 def get_structure_prompt(structure_name):
