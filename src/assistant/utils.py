@@ -103,6 +103,7 @@ def invoke_ollama(model, system_prompt, user_prompt, output_format=None):
         response = client.chat(
             messages=messages,
             model=model,
+            options={"temperature": 1.0},
             format=output_format.model_json_schema() if output_format else None
         )
         

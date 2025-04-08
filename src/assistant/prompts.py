@@ -95,6 +95,8 @@ PROVIDED INFORMATION:
 - Focus ONLY on factual, objective information
 - Avoid redundancy, repetition, or unnecessary commentary
 - List financial relevant metrics and results in the summary
+- Prediction should rely on the provided information and be based on logical reasoning
+- Analyze provided information step by step. For each factor, explain how it might influence Company stock price. Then, based on your analysis, predict the stock price for one month from now. Provide your reasoning and a specific price prediction.
 """
 
 def get_structure_prompt(structure_name):
