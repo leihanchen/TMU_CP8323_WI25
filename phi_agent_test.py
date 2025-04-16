@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List, Literal
 from phi.model.ollama import Ollama
 from phi.tools.yfinance import YFinanceTools
-from phi.tools.tavily import TavilyTools
+from phi.tools.tavily import TavilyTools, DuckDuckGo
 from phi.vectordb.chroma import ChromaDb
 from phi.knowledge.json import JSONKnowledgeBase
 from phi.knowledge.text import TextKnowledgeBase
@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 REASONING_MODEL_ID = "deepseek-r1:7b"
-TOOL_MODEL_ID = "llama3.2"
+TOOL_MODEL_ID = "llama3.2:3b"
 
 
 class StockPrice(BaseModel):
@@ -88,7 +88,7 @@ web_agent = Agent(
     name="Web Agent",
     role="Search the web for information",
     model=Ollama(id=TOOL_MODEL_ID),
-    tools=[TavilyTools()],
+    tools=[DuckDuckGo()],
     instructions=["Always include sources"],
     show_tool_calls=True,
     markdown=True,
