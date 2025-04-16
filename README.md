@@ -1,12 +1,6 @@
-# 🚀 **Local RAG Researcher with DeepSeek R1 & Langgraph**
+# 🚀 **Financial RAG Chatbot with DeepSeek R1 & Langgraph**
 
-### 👉 **[Learn How to Build a Local RAG Researcher – Step-by-Step Guide Inside!](https://dev.to/kaymen99/build-your-own-local-rag-researcher-with-deepseek-r1-11m) 🚀**
-
-I built a **local adaptive RAG research agent** using **LangGraph** and a local **DeepSeek R1 model** running on **Ollama**. This agent act like a deep researcher, designed to gather, analyze, and summarize information based on user instructions.  
-
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/5dc34341-3a2f-461c-b66d-46b134fe5bd9" alt="Demo of Local RAG Researcher with LangGraph & DeepSeek">
-</div>
+This is a  **local adaptive RAG financial agent** using **LangGraph** and a local **DeepSeek R1 model** running on **Ollama**. This agent act like a deep researcher, designed to gather, analyze, and summarize information based on user instructions.  
 
 ## **How It Works** 
 
@@ -22,13 +16,12 @@ I built a **local adaptive RAG research agent** using **LangGraph** and a local 
 
 6. **Final Report Generation** – The summarized findings are sent to a **writer agent**, which structures the information into a **detailed and well-formatted report** based on a predefined format.  
 
-This system allows for an **efficient and adaptive research process**, ensuring high-quality and relevant outputs while minimizing unnecessary or low-value data.
 
 ## **Key Features**  
 
 - **Dynamic Search Through Local Documents** – Efficiently retrieves relevant information from your internal documents.  
 - **Advanced Insight Extraction** – Leverages the reasoning power of **DeepSeek R1** model to evaluate, analyze, and extract the most valuable insights from documents.  
-- **Real-Time Web Search** – Expands research by accessing online sources using **[Tavily API](https://tavily.com/)** when local documents are insufficient.  
+- **Real-Time Web Search** – Expands research by accessing online sources using **[Tavily API](https://tavily.com/)** or **[DuckDuckGO](https://duckduckgo.com/)** when local documents are insufficient and irrelevant.  
 - **Structured Report Generation** – Produces well-formatted reports based on your predefined reporting templates.
 
 ## System Flowchart
@@ -52,7 +45,7 @@ This is the detailed flow of the system:
 Ensure you have the following installed:
 - Python 3.9+
 - Ollama
-- Tavily API key for web searchs
+- Tavily API key or DuckDuckGo for web searchs
 - Necessary Python libraries (listed in `requirements.txt`)
 
 ### Setup
@@ -141,8 +134,5 @@ By default, the researcher runs locally using the **DeepSeek R1 model** on **Oll
 
 * LangGraph Adaptative RAG implementation [see](https://github.com/langchain-ai/langgraph/blob/main/examples/rag/langgraph_adaptive_rag_local.ipynb)
 
-## Contributing
-Contributions are welcome! Please open an issue or submit a pull request for any changes.
-
 ## Contact
-If you have any questions or suggestions, feel free to contact me at aymenMir1001@gmail.com.
+If you have any questions or suggestions, feel free to contact me at leihan.chen@torontomu.ca.
